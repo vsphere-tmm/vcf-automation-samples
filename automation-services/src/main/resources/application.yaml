@@ -1,3 +1,4 @@
 server:
   url: "https://<vcfa-url>"
   access_token: "<bearer_token>"
+  verify_ssl: false

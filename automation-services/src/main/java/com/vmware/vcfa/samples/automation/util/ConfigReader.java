@@ -27,4 +27,17 @@ public class ConfigReader {
     public String getServerUrl() {
         return serverconfig.get("url");
     }
+
+    public Boolean getVerifySsl() {
+        Object value = serverconfig.get("verify_ssl");
+
+        if (value instanceof Boolean) {
+            return (Boolean) value;
+        } else if (value instanceof String) {
+            return Boolean.parseBoolean((String) value);
+        } else {
+            return false; // Default value if key is missing or invalid
+        }
+    }
+
 }
