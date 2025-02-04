@@ -44,7 +44,7 @@ public class ProjectCRUDSample {
      */
     public Project createProject() throws ApiException {
         String api_version="2019-01-15";
-        ProjectSpecification projectSpecification = buildProjectSpecification("sampleproject2",
+        ProjectSpecification projectSpecification = buildProjectSpecification("sampleproject3",
                 "fritz@coke.sqa-local.com", "user");
         return projectApi.create(projectSpecification, false, api_version);
     }

@@ -1,0 +1,4 @@
+server:
+  url: "https://<vcfa-fqdn>"
+  access_token: "<bearer-token-goes-here>"
+  verify_ssl: true

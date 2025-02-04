@@ -36,3 +36,9 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+## Generated content ##
+openapi_generated/
+openapi_sdk_generated/
+downloaded_vra_specs/
+openapi_sdk_failed_modules.log
