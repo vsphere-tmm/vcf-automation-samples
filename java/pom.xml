@@ -11,6 +11,7 @@
 
     <modules>
         <module>automation-services</module>
+        <module>vcfa-samples-commons</module>
     </modules>
 
     <properties>

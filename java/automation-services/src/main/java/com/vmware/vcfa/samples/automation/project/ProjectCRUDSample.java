@@ -6,7 +6,7 @@ import com.vmware.project_service.ApiClient;
 import com.vmware.project_service.model.Principal;
 import com.vmware.project_service.model.Project;
 import com.vmware.project_service.model.ProjectSpecification;
-import com.vmware.vcfa.samples.automation.util.ConfigReader;
+import com.vmware.vcfa.util.ConfigReader;
 
 import java.util.List;
 

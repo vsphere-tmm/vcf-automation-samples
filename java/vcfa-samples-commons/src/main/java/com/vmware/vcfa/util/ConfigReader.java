@@ -1,4 +1,4 @@
-package com.vmware.vcfa.samples.automation.util;
+package com.vmware.vcfa.util;
 
 import java.io.InputStream;
 import java.util.Map;
