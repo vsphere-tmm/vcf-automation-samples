@@ -1,6 +1,14 @@
 #!/bin/bash
 
-CONFIG_FILE="../resources/application.yaml"
+PROJECT_REPO_PATH=$1
+
+if [ -z "$PROJECT_REPO_PATH" ]; then
+  echo "Usage: [optional] Provide Project path as argument. example: ./generarate_sdk.sh <PROJECT_ROOT_PATH>"
+  PROJECT_REPO_PATH="../../../../"
+  echo $PROJECT_REPO_PATH
+fi
+
+CONFIG_FILE="$PROJECT_REPO_PATH/vcfa-samples-commons/src/main/resources/application.yaml"
 
 #extract .server.url from the CONFIG_FILE
 VCFA_URL=$(sed -n 's/^[[:space:]]*url:[[:space:]]*"\(.*\)"/\1/p' "$CONFIG_FILE")
