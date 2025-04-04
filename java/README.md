@@ -13,7 +13,12 @@ Try out the Sample project creation in this repository.
 Identify a vRA instance that is reachable from your machine and provide the following details of the instance in src/main/resources/application.yaml:
    - server.url
    - server.access_token
+   - server.verify_ssl
+   - server.ssl_cert_path
+   
+ Provide the ssl certificate path in perm format if verify_ssl is set to true.
 ```
+
 
 #### 2. Steps to download and generate project-service client sdk
 **Downloading vRA specs and generating client bindings for vRA specs using Open API**

@@ -8,6 +8,8 @@ import com.vmware.project_service.model.Project;
 import com.vmware.project_service.model.ProjectSpecification;
 import com.vmware.vcfa.util.ConfigReader;
 
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.util.List;
 
 public class ProjectCRUDSample {
@@ -31,7 +33,15 @@ public class ProjectCRUDSample {
 
         apiClient = new ApiClient();
         apiClient.setBasePath(basePath);
-        apiClient.setVerifyingSsl(config.getVerifySsl());
+        try {
+            boolean verifySsl = config.getVerifySsl();
+            apiClient.setVerifyingSsl(verifySsl);
+            if(verifySsl) {
+                apiClient.setSslCaCert(new FileInputStream(config.getSslCertPath()));
+            }
+        } catch (FileNotFoundException e) {
+            throw new RuntimeException(e);
+        }
         apiClient.setApiKeyPrefix("Bearer");
         apiClient.setApiKey(accessToken);
         projectApi = new ProjectApi(apiClient);

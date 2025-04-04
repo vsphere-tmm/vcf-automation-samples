@@ -28,6 +28,10 @@ public class ConfigReader {
         return serverconfig.get("url");
     }
 
+    public String getSslCertPath() {
+        return serverconfig.get("ssl_cert_path");
+    }
+
     public Boolean getVerifySsl() {
         Object value = serverconfig.get("verify_ssl");
 
