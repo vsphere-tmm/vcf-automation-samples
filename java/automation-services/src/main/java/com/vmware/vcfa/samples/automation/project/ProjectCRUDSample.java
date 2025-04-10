@@ -1,11 +1,11 @@
 package com.vmware.vcfa.samples.automation.project;
 
-import com.vmware.project_service.ApiException;
-import com.vmware.project_service.ProjectApi;
-import com.vmware.project_service.ApiClient;
-import com.vmware.project_service.model.Principal;
-import com.vmware.project_service.model.Project;
-import com.vmware.project_service.model.ProjectSpecification;
+import com.vmware.vcfa.project_service.ApiException;
+import com.vmware.vcfa.project_service.ProjectApi;
+import com.vmware.vcfa.project_service.ApiClient;
+import com.vmware.vcfa.project_service.model.Principal;
+import com.vmware.vcfa.project_service.model.Project;
+import com.vmware.vcfa.project_service.model.ProjectSpecification;
 import com.vmware.vcfa.util.ConfigReader;
 
 import java.io.FileInputStream;

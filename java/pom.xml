@@ -23,9 +23,9 @@
     <dependencies>
     <!-- @Nullable annotation -->
     <dependency>
-        <groupId>org.openapitools</groupId>
-        <artifactId>openapi-java-client</artifactId>
-        <version>2019-01-15</version>
+        <groupId>com.vmware.vcfa</groupId>
+        <artifactId>project-service</artifactId>
+        <version>9.0</version>
     </dependency>
         <dependency>
             <groupId>org.yaml</groupId>

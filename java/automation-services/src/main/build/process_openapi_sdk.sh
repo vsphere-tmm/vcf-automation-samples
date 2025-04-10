@@ -30,7 +30,7 @@ function generate_sdk() {
 
             module_name=$(extract_module_name "$FILE")
 
-            openapi-generator generate -i $FILE -g java -o openapi_generated/$module_name --invoker-package com.vmware.$module_name --api-package com.vmware.$module_name --model-package com.vmware.$module_name.model
+            openapi-generator generate -i $FILE -g java -o openapi_generated/$module_name --invoker-package com.vmware.vcfa.$module_name --api-package com.vmware.vcfa.$module_name --model-package com.vmware.vcfa.$module_name.model --group-id com.vmware.vcfa --artifact-id $module_name --artifact-version 9.0
             if [[ $? -eq 0 ]]; then
                 echo "generation successful for $module_name"
             else

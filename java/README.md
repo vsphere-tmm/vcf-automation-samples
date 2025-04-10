@@ -19,11 +19,11 @@ Identify a vRA instance that is reachable from your machine and provide the foll
  Provide the ssl certificate path in perm format if verify_ssl is set to true.
 ```
 
-
 #### 2. Steps to download and generate project-service client sdk
 **Downloading vRA specs and generating client bindings for vRA specs using Open API**
 - Navigate to `automation-services/src/main/build` of the repo
 - Ensure script has execute permission by executing `chmod +x generate_sdk.sh`
+- Ensure `openapi-generator` is in the PATH
 - Run the script `./generate_sdk.sh` from the same directory
 - This script would
   - download all the OpenAPI specs of vRA to `downloaded_vra_specs` directory
