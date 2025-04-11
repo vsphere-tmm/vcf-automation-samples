@@ -17,7 +17,7 @@ public class ProjectCRUDSample {
     public ApiClient apiClient;
     public ProjectApi projectApi;
 
-    public static void main(String[] args) throws ApiException {
+    public static void main(String[] args) {
         ProjectCRUDSample service = new ProjectCRUDSample();
         Project project = service.createProject();
         System.out.println("Successfully created project " + project.getName());
@@ -36,7 +36,7 @@ public class ProjectCRUDSample {
         try {
             boolean verifySsl = config.getVerifySsl();
             apiClient.setVerifyingSsl(verifySsl);
-            if(verifySsl) {
+            if (verifySsl) {
                 apiClient.setSslCaCert(new FileInputStream(config.getSslCertPath()));
             }
         } catch (FileNotFoundException e) {
@@ -50,26 +50,31 @@ public class ProjectCRUDSample {
     /**
      * Create a project named sampleproject.This example assumes that sampleproject does not exist.
      * The different roles added to the sample project are not validated.
+     *
      * @throws ApiException
      */
-    public Project createProject() throws ApiException {
-        String api_version="2019-01-15";
+    public Project createProject() {
         ProjectSpecification projectSpecification = buildProjectSpecification("sampleproject3",
                 "fritz@coke.sqa-local.com", "user");
-        return projectApi.create(projectSpecification, false, api_version);
+        try {
+            return projectApi.create(projectSpecification, false, Constants.API_VERSION);
+        } catch (ApiException e) {
+            throw new RuntimeException(e);
+        }
     }
 
 
-    public void deleteProject(String projectId) throws ApiException {
+    public void deleteProject(String projectId) {
         try {
             projectApi.deleteProject(projectId, "2019-01-15");
-        } catch (ApiException e)   {
+        } catch (ApiException e) {
             System.out.println(e.getMessage());
         }
     }
 
     /**
      * Create a project specification for sample project with administrators, members, and viewers at company coke.com.
+     *
      * @return
      */
     private static ProjectSpecification buildProjectSpecification(String projectName, String email, String role) {

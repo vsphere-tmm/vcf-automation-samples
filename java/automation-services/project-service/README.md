@@ -16,12 +16,12 @@ Identify a vRA instance that is reachable from your machine and provide the foll
    - server.verify_ssl
    - server.ssl_cert_path
    
- Provide the ssl certificate path in perm format if verify_ssl is set to true.
+ Provide the ssl certificate path in perm format. This is required if verify_ssl is set to true.
 ```
 
 #### 2. Steps to download and generate project-service client sdk
 **Downloading vRA specs and generating client bindings for vRA specs using Open API**
-- Navigate to `automation-services/src/main/build` of the repo
+- Navigate to `automation-services/build-scripts` of the repo
 - Ensure script has execute permission by executing `chmod +x generate_sdk.sh`
 - Ensure `openapi-generator` is in the PATH
 - Run the script `./generate_sdk.sh` from the same directory
@@ -34,6 +34,6 @@ Identify a vRA instance that is reachable from your machine and provide the foll
 
 #### 3. Create the sample project
 **Run the main method in ProjectCRUDSample.java**
-- Navigate to automation-services/src/main/java/com/vmware/vcfa/samples/automation/project/ProjectCRUDSample.java
+- Navigate to automation-services/project-service/src/main/java/com/vmware/vcfa/samples/automation/project/ProjectCRUDSample.java
 - Run the main() method
 

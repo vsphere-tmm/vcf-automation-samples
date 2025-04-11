@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # Define an array
-readonly vra_spec_locations=("project-service/api/swagger/v3/api-docs/2019-01-15")
+readonly vra_spec_locations=("project-service/api/swagger/v3/api-docs/2019-01-15" "catalog/api-docs/classic-apis/api-doc-public-classic-vra-2020-08-25.yaml")
 readonly vra_download_location="downloaded_vra_specs"
 
 

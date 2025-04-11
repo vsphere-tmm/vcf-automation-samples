@@ -4,7 +4,7 @@ PROJECT_REPO_PATH=$1
 
 if [ -z "$PROJECT_REPO_PATH" ]; then
   echo "Usage: [optional] Provide Project path as argument. example: ./generarate_sdk.sh <PROJECT_ROOT_PATH>"
-  PROJECT_REPO_PATH="../../../../"
+  PROJECT_REPO_PATH="../../"
   echo $PROJECT_REPO_PATH
 fi
 
@@ -24,7 +24,14 @@ if [ -d "$download_path" ]; then
   ./process_openapi_sdk.sh downloaded_vra_specs
   service_repo_parent="openapi_generated"
   if [ -d "$service_repo_parent" ]; then
-    cd $service_repo_parent/project-service && mvn clean install
+    for dir in "$service_repo_parent"/*/; do
+          if [ -f "$dir/pom.xml" ]; then
+            echo "Running mvn clean install in $dir"
+            (cd "$dir" && mvn clean install)
+          else
+            echo "Skipping $dir — no pom.xml found."
+          fi
+    done
   else
     echo "service code is not generated from the openAPI spec in $download_path"
   fi

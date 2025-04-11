@@ -11,7 +11,12 @@
         </parent>
 
         <artifactId>automation-services</artifactId>
-        <packaging>jar</packaging>
+        <packaging>pom</packaging>
+
+    <modules>
+        <module>project-service</module>
+        <module>catalog-service</module>
+    </modules>
 
     <dependencies>
         <dependency>
