@@ -1,4 +1,4 @@
-package catalog;
+package com.vmware.vcfa.samples.automation.catalog;
 
 import catalog.util.DeploymentInputReader;
 import com.vmware.vcfa.catalog.ApiClient;
@@ -13,19 +13,19 @@ import java.io.FileNotFoundException;
 import java.util.List;
 import java.util.UUID;
 
-public class DeploymentSample {
+public class CatalogDeploymentSample {
 
     ApiClient apiClient;
     CatalogItemsApi catalogItemsApi;
     DeploymentInputReader deploymentInputReader;
 
     public static void main(String[] args) throws ApiException {
-        DeploymentSample service = new DeploymentSample();
+        CatalogDeploymentSample service = new CatalogDeploymentSample();
         service.createDeployment();
     }
 
 
-    public DeploymentSample() {
+    public CatalogDeploymentSample() {
         deploymentInputReader = new DeploymentInputReader();
         ConfigReader config = new ConfigReader();
         String accessToken = config.getAccessToken();

@@ -33,4 +33,16 @@ public class DeploymentInputReader {
         return serverConfig.get("catalog_item_id");
     }
 
+    public String getflavorName() {
+        return serverConfig.get("flavor_name");
+    }
+
+    public String getImageName() {
+        return serverConfig.get("image_name");
+    }
+
+    public String getCloudZoneId() {
+        return serverConfig.get("cloud_zone_id");
+    }
+
 }

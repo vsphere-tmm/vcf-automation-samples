@@ -1,6 +1,6 @@
 server:
   url: "https://<vcfa-fqdn>"
-  access_token: "<bearer-token-goes-here>"
+  access_token: "null"
   verify_ssl: false
   ssl_cert_path: "<Path-to-ssl-Pem-file>"
   username: "admin"

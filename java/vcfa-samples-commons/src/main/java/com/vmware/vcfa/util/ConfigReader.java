@@ -42,7 +42,7 @@ public class ConfigReader {
         boolean verifySsl = getVerifySsl();
         if (acces_token.equals("null")) {
             try {
-                acces_token = getAccessTokenWithSelfSignedCert(getServerUrl(), serverconfig.get("username"), serverconfig.get("password"), serverconfig.get("organization"), verifySsl, new FileInputStream(getSslCertPath()));
+                acces_token = getAccessTokenWithSelfSignedCert(getServerUrl(), serverconfig.get("username"), serverconfig.get("password"), serverconfig.get("organization"), verifySsl);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -51,17 +51,17 @@ public class ConfigReader {
         return acces_token;
     }
 
-    public static String getAccessTokenWithSelfSignedCert(
+    public String getAccessTokenWithSelfSignedCert(
             String tmUrl,
             String username,
             String password,
             String orgName,
-            boolean verifySSL,
-            InputStream sslCaCert) throws Exception {
+            boolean verifySSL) throws Exception {
 
         if (verifySSL) {
             // Load trusted cert from InputStream
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
+            InputStream sslCaCert = new FileInputStream(getSslCertPath());
             X509Certificate cert = (X509Certificate) cf.generateCertificate(sslCaCert);
 
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
