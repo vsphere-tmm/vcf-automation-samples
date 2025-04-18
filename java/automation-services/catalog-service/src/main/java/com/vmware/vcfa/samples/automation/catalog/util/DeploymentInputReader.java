@@ -1,4 +1,4 @@
-package catalog.util;
+package com.vmware.vcfa.samples.automation.catalog.util;
 
 import org.yaml.snakeyaml.Yaml;
 

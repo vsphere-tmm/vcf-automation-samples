@@ -35,10 +35,23 @@ Identify a vRA instance that is reachable from your machine and provide the foll
 - Ensure a project and add vsphere cloud zone in it. Note the Id of this project.
 - Create a blueprint and publish it as a catalog-item. Note the Id of this catalog item.
 
-#### 5. Configure the input information
+
+#### 4. Create a deployment from the catalog Item
+Configuration for running CatalogDeploymentSample.java
 - Add the deployment name, project Id and catalog Id from the above step into src/main/resources/catalog.yaml
 
-#### 6. Create a deployment from the catalog Item
-**Run the main method in DeploymentSample.java**
-- Navigate to catalog-service/src/main/java/catalog/DeploymentSample.java
+**Run the main() method in CatalogDeploymentSample.java**
+- Navigate to catalog-service/src/main/java/com/vmware/vcfa/samples/automation/catalog/CatalogDeploymentSample.java
+- Run the main() method
+
+#### 5. Create a VM Resource from image, flavor and zone
+Configuration for running ResourceDeploymentSample
+- Add the   flavor_name, image_name,cloud_zone_id into src/main/resources/catalog.yaml
+  - example
+    - flavor_name: "small"
+    - image_name: "CONTENT-LIBRARY-VC03 / DND-e2e-onboarding-template-photon-dual-stack-with-additional-disk"
+    - cloud_zone_id: "dd42e3ce-d846-4411-8a90-1df9f3882abb"
+
+**Run the main method in ResourceDeploymentSample.java**
+- Navigate to catalog-service/src/main/java/com/vmware/vcfa/samples/automation/catalog/ResourceDeploymentSample.java
 - Run the main() method

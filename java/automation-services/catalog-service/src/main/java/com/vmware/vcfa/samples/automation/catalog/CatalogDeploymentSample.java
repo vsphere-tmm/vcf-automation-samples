@@ -1,6 +1,6 @@
 package com.vmware.vcfa.samples.automation.catalog;
 
-import catalog.util.DeploymentInputReader;
+import com.vmware.vcfa.samples.automation.catalog.util.DeploymentInputReader;
 import com.vmware.vcfa.catalog.ApiClient;
 import com.vmware.vcfa.catalog.ApiException;
 import com.vmware.vcfa.catalog.CatalogItemsApi;
