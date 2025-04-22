@@ -7,26 +7,34 @@
  */
 package com.vmware.vcf;
 
+import org.yaml.snakeyaml.Yaml;
+import com.vmware.vcfa.util.ConfigReader;
 import java.io.IOException;
 import java.io.InputStream;
-import java.util.Properties;
+import java.util.Map;
 
 public class SettingsLoader {
-    private static final Properties properties = new Properties();
+    public static final String TM = "tm";
+    public static Map<String, String> serverConfig;
 
-    static {
-        try (InputStream input = SettingsLoader.class.getClassLoader().getResourceAsStream(Constants.SETTINGS_FILE)) {
+    private SettingsLoader() {
+        try (InputStream input = ConfigReader.class.getClassLoader().getResourceAsStream(Constants.SETTINGS_FILE)) {
             if (input == null) {
                 throw new RuntimeException("Unable to find " + Constants.SETTINGS_FILE);
             }
-            properties.load(input);
+            final Yaml yaml = new Yaml();
+            final Map<String, Object> data = yaml.load(input);
+            serverConfig = (Map<String, String>) data.get(TM);
         } catch (IOException e) {
             throw new RuntimeException("Failed to load settings file", e);
         }
     }
 
-    public static String get(String key) {
-        return properties.getProperty(key);
+    public static Map<String, String> getServerConfig() {
+        if (serverConfig == null) {
+            new SettingsLoader();
+        }
+        return serverConfig;
     }
 }
 

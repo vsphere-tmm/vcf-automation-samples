@@ -8,8 +8,8 @@
 package com.vmware.vcf;
 
 public class Constants {
-    public static final String SETTINGS_FILE = "settings.properties";
-    public static final String SERVER_URL = "server.url";
+    public static final String SETTINGS_FILE = "application.yaml";
+    public static final String SERVER_URL = "url";
     public static final String SERVER_VERSION = "server.version";
     public static final String AUTH_USERNAME = "auth.username";
     public static final String AUTH_TENANT = "auth.tenant";

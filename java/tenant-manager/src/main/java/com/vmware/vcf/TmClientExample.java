@@ -11,17 +11,13 @@ import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.concurrent.TimeoutException;
-import javax.ws.rs.BadRequestException;
 
 import com.vmware.cxfrestclient.CxfClientSecurityContext;
 import com.vmware.vcloud.api.rest.client.OpenApiClient;
 import com.vmware.vcloud.api.rest.client.VcdBasicLoginCredentials;
 import com.vmware.vcloud.api.rest.client.VcdClient;
 import com.vmware.vcloud.api.rest.client.VcdClientImpl;
-import com.vmware.vcloud.api.rest.schema_v1_5.TaskType;
 import com.vmware.vcloud.rest.openapi.api.OrgApi;
-import com.vmware.vcloud.rest.openapi.model.Org;
 import com.vmware.vcloud.rest.openapi.model.Orgs;
 
 /**
@@ -50,39 +46,16 @@ public class TmClientExample {
         return orgs;
     }
 
-    public static Org createOrg() throws BadRequestException {
-        final Org newOrg = new Org()
-                .name("tmClientOrg1")
-                .description("tmClientOrg1")
-                .displayName("tmClientOrg1")
-                .isEnabled(true);
-        Org createdOrg = orgsApi.createOrg(newOrg);
-        if (createdOrg == null) {
-            createdOrg = waitForOrgCreateTask();
-        }
-        return createdOrg;
-    }
-
-    private static Org waitForOrgCreateTask() {
-        try {
-            final String updateTaskLink = client.getOpenApiClient().getLastTaskUri(orgsApi).toString();
-            final TaskType taskType = client.getTaskMonitor().waitForSuccess(updateTaskLink, 10_000);
-            return orgsApi.getOrg(taskType.getOwner().getId());
-        } catch (TimeoutException e) {
-            throw new RuntimeException("Failed to wait for result of org update task.", e);
-        }
-    }
-
     private static VcdClient getClient() throws GeneralSecurityException {
         if (client != null) {
             return client;
         }
 
-        String serverUrl = SettingsLoader.get(Constants.SERVER_URL);
-        String serverVersion = SettingsLoader.get(Constants.SERVER_VERSION);
-        String username = SettingsLoader.get(Constants.AUTH_USERNAME);
-        String tenant = SettingsLoader.get(Constants.AUTH_TENANT);
-        String password = SettingsLoader.get(Constants.AUTH_PASSWORD);
+        String serverUrl = SettingsLoader.getServerConfig().get(Constants.SERVER_URL);
+        String serverVersion = SettingsLoader.getServerConfig().get(Constants.SERVER_VERSION);
+        String username = SettingsLoader.getServerConfig().get(Constants.AUTH_USERNAME);
+        String tenant = SettingsLoader.getServerConfig().get(Constants.AUTH_TENANT);
+        String password = SettingsLoader.getServerConfig().get(Constants.AUTH_PASSWORD);
 
         client = new VcdClientImpl(URI.create(serverUrl), serverVersion, securityContext);
         client.setCredentials(new VcdBasicLoginCredentials(username, tenant, password));
@@ -94,8 +67,8 @@ public class TmClientExample {
      * Only needed if your VCD instance is not using a well-signed certificate.
      */
     private static KeyStore getKeyStore() throws Exception {
-        String alias = SettingsLoader.get(Constants.TRUSTSTORE_ALIAS);
-        String truststoreType = SettingsLoader.get(Constants.TRUSTSTORE_TYPE);
+        String alias = SettingsLoader.getServerConfig().get(Constants.TRUSTSTORE_ALIAS);
+        String truststoreType = SettingsLoader.getServerConfig().get(Constants.TRUSTSTORE_TYPE);
 
         // Initialize KeyStore
         KeyStore keyStore = KeyStore.getInstance(truststoreType);
@@ -122,6 +95,6 @@ public class TmClientExample {
 
     private static X509Certificate[] getVcdCert() {
         final TmCertificateUtil tmCertificateUtil = new TmCertificateUtil();
-        return tmCertificateUtil.getCertificateForEndpoint(URI.create(SettingsLoader.get(Constants.SERVER_URL))).get();
+        return tmCertificateUtil.getCertificateForEndpoint(URI.create(SettingsLoader.getServerConfig().get(Constants.SERVER_URL))).get();
     }
 }
