@@ -7,11 +7,11 @@ import com.vmware.vcfa.catalog.ResourcesApi;
 import com.vmware.vcfa.catalog.model.CatalogItemRequest;
 import com.vmware.vcfa.catalog.model.ResourceRequestResponse;
 import com.vmware.vcfa.catalog.model.ResourceSpecification;
+import com.vmware.vcfa.util.CertificateUtil;
 import com.vmware.vcfa.util.ConfigReader;
 import org.jetbrains.annotations.NotNull;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.net.URI;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -38,9 +38,9 @@ public class ResourceDeploymentSample {
             boolean verifySsl = config.getVerifySsl();
             apiClient.setVerifyingSsl(verifySsl);
             if (verifySsl) {
-                apiClient.setSslCaCert(new FileInputStream(config.getSslCertPath()));
+                apiClient.setSslCaCert(CertificateUtil.getSSlCaCert(URI.create(config.getServerUrl())));
             }
-        } catch (FileNotFoundException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         apiClient.setBearerToken(accessToken);

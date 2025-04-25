@@ -12,6 +12,7 @@
     <modules>
         <module>automation-services</module>
         <module>vcfa-samples-commons</module>
+        <module>tenant-manager</module>
     </modules>
 
     <properties>

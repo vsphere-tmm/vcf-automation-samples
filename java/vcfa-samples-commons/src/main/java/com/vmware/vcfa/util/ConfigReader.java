@@ -6,6 +6,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.URI;
 import java.net.URL;
 import java.security.KeyStore;
 import java.security.cert.CertificateFactory;
@@ -61,7 +62,7 @@ public class ConfigReader {
         if (verifySSL) {
             // Load trusted cert from InputStream
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            InputStream sslCaCert = new FileInputStream(getSslCertPath());
+            InputStream sslCaCert = CertificateUtil.getSSlCaCert(URI.create(tmUrl));
             X509Certificate cert = (X509Certificate) cf.generateCertificate(sslCaCert);
 
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());
@@ -131,9 +132,6 @@ public class ConfigReader {
         return serverconfig.get("url");
     }
 
-    public String getSslCertPath() {
-        return serverconfig.get("ssl_cert_path");
-    }
 
     public Boolean getVerifySsl() {
         Object value = serverconfig.get("verify_ssl");

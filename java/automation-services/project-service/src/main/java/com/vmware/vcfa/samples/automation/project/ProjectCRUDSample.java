@@ -6,10 +6,10 @@ import com.vmware.vcfa.project_service.ApiClient;
 import com.vmware.vcfa.project_service.model.Principal;
 import com.vmware.vcfa.project_service.model.Project;
 import com.vmware.vcfa.project_service.model.ProjectSpecification;
+import com.vmware.vcfa.util.CertificateUtil;
 import com.vmware.vcfa.util.ConfigReader;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.net.URI;
 import java.util.List;
 
 public class ProjectCRUDSample {
@@ -37,9 +37,9 @@ public class ProjectCRUDSample {
             boolean verifySsl = config.getVerifySsl();
             apiClient.setVerifyingSsl(verifySsl);
             if (verifySsl) {
-                apiClient.setSslCaCert(new FileInputStream(config.getSslCertPath()));
+                apiClient.setSslCaCert(CertificateUtil.getSSlCaCert(URI.create(config.getServerUrl())));
             }
-        } catch (FileNotFoundException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         apiClient.setApiKeyPrefix("Bearer");

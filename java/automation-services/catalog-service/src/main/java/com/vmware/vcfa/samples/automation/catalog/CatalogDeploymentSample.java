@@ -6,10 +6,10 @@ import com.vmware.vcfa.catalog.ApiException;
 import com.vmware.vcfa.catalog.CatalogItemsApi;
 import com.vmware.vcfa.catalog.model.CatalogItemRequest;
 import com.vmware.vcfa.catalog.model.CatalogItemRequestResponse;
+import com.vmware.vcfa.util.CertificateUtil;
 import com.vmware.vcfa.util.ConfigReader;
 
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
+import java.net.URI;
 import java.util.List;
 import java.util.UUID;
 
@@ -37,9 +37,9 @@ public class CatalogDeploymentSample {
             boolean verifySsl = config.getVerifySsl();
             apiClient.setVerifyingSsl(verifySsl);
             if (verifySsl) {
-                apiClient.setSslCaCert(new FileInputStream(config.getSslCertPath()));
+                apiClient.setSslCaCert(CertificateUtil.getSSlCaCert(URI.create(config.getServerUrl())));
             }
-        } catch (FileNotFoundException e) {
+        } catch (Exception e) {
             throw new RuntimeException(e);
         }
         apiClient.setBearerToken(accessToken);

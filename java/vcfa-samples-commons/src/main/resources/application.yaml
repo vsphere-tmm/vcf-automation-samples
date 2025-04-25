@@ -1,8 +1,7 @@
 server:
   url: "https://<vcfa-fqdn>"
   access_token: "null"
-  verify_ssl: false
-  ssl_cert_path: "<Path-to-ssl-Pem-file>"
+  verify_ssl: true
   username: "admin"
   password: "VMware1!"
   organization: "coke"

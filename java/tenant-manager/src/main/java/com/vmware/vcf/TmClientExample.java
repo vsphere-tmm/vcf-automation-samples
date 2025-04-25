@@ -13,6 +13,7 @@ import java.security.KeyStore;
 import java.security.cert.X509Certificate;
 
 import com.vmware.cxfrestclient.CxfClientSecurityContext;
+import com.vmware.vcfa.util.CertificateUtil;
 import com.vmware.vcloud.api.rest.client.OpenApiClient;
 import com.vmware.vcloud.api.rest.client.VcdBasicLoginCredentials;
 import com.vmware.vcloud.api.rest.client.VcdClient;
@@ -81,7 +82,7 @@ public class TmClientExample {
         }
 
         // Fetch and add the certificate if not already present
-        X509Certificate[] cert = getVcdCert();
+        X509Certificate[] cert = CertificateUtil.getVcfCert(URI.create(SettingsLoader.getServerConfig().get(Constants.SERVER_URL)));
         if (cert != null && cert.length > 0) {
             keyStore.setCertificateEntry(alias, cert[cert.length - 1]);
             System.out.println("Added new certificate to KeyStore with alias: " + alias);
@@ -93,8 +94,4 @@ public class TmClientExample {
     }
 
 
-    private static X509Certificate[] getVcdCert() {
-        final TmCertificateUtil tmCertificateUtil = new TmCertificateUtil();
-        return tmCertificateUtil.getCertificateForEndpoint(URI.create(SettingsLoader.getServerConfig().get(Constants.SERVER_URL))).get();
-    }
 }
