@@ -1,7 +1,5 @@
 package com.vmware.vcfa.util;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -24,7 +22,8 @@ import javax.net.ssl.X509TrustManager;
 
 public class ConfigReader {
 
-    Map<String, String> serverconfig;
+    Map<String, String> tenantConfig;
+
 
     public ConfigReader() {
         String fileName = "application.yaml";  // File is under src/main/resources
@@ -32,18 +31,25 @@ public class ConfigReader {
         try {
             Yaml yaml = new Yaml();
             Map<String, Object> data = yaml.load(inputStream);
-            serverconfig = (Map<String, String>) data.get("server");
+            Map<String, Object> vcfa = (Map<String, Object>) data.get("vcfa");
+            Map<String, Object> auth = (Map<String, Object>) vcfa.get("auth");
+            tenantConfig = (Map<String, String>) auth.get("tenant");
+            tenantConfig.put("url", (String) vcfa.get("url"));
+
+            Map<String, Object> ssl = (Map<String, Object>) vcfa.get("ssl");
+            tenantConfig.put("verify_ssl", String.valueOf(ssl.get("verify_ssl")));
+
         } catch (Exception e) {
             e.printStackTrace();
         }
     }
 
     public String getAccessToken() {
-        String acces_token = serverconfig.get("access_token");
+        String acces_token = tenantConfig.get("access_token");
         boolean verifySsl = getVerifySsl();
         if (acces_token.equals("null")) {
             try {
-                acces_token = getAccessTokenWithSelfSignedCert(getServerUrl(), serverconfig.get("username"), serverconfig.get("password"), serverconfig.get("organization"), verifySsl);
+                acces_token = getAccessTokenWithSelfSignedCert(getServerUrl(), tenantConfig.get("username"), tenantConfig.get("password"), tenantConfig.get("org_name"), verifySsl);
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -129,12 +135,12 @@ public class ConfigReader {
 
 
     public String getServerUrl() {
-        return serverconfig.get("url");
+        return tenantConfig.get("url");
     }
 
 
     public Boolean getVerifySsl() {
-        Object value = serverconfig.get("verify_ssl");
+        Object value = tenantConfig.get("verify_ssl");
 
         if (value instanceof Boolean) {
             return (Boolean) value;

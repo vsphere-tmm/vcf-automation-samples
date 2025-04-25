@@ -1,15 +1,18 @@
-server:
-  url: "https://<vcfa-fqdn>"
-  access_token: "null"
-  verify_ssl: true
-  username: "admin"
-  password: "VMware1!"
-  organization: "coke"
-tm:
-  url: "https://172.16.123.1:8443/api"
-  server.version: "40.0"
-  auth.username: "administrator"
-  auth.tenant: "System"
-  auth.password: "VmwareVmware123!"
-  truststore.alias: "TenantManagerCert"
-  truststore.type: "JKS"
+vcfa:
+  url: "https://<vcfa-host>"
+  auth:
+    provider:
+      org_name: "system"
+      username: "administrator"
+      password: "VMware"
+      api_version: "40.0"
+    tenant:
+      org_name: "coke"
+      access_token: "null"
+      username: "admin"
+      password: "VMware"
+  ssl:
+    verify_ssl: true
+    trust_store:
+      alias: "TenantManagerCert"
+      type: "JKS"

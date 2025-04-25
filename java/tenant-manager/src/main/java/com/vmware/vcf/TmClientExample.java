@@ -52,11 +52,11 @@ public class TmClientExample {
             return client;
         }
 
-        String serverUrl = SettingsLoader.getServerConfig().get(Constants.SERVER_URL);
-        String serverVersion = SettingsLoader.getServerConfig().get(Constants.SERVER_VERSION);
-        String username = SettingsLoader.getServerConfig().get(Constants.AUTH_USERNAME);
-        String tenant = SettingsLoader.getServerConfig().get(Constants.AUTH_TENANT);
-        String password = SettingsLoader.getServerConfig().get(Constants.AUTH_PASSWORD);
+        String serverUrl = SettingsLoader.getProviderConfig().get(Constants.SERVER_URL);
+        String serverVersion = SettingsLoader.getProviderConfig().get(Constants.SERVER_VERSION);
+        String username = SettingsLoader.getProviderConfig().get(Constants.AUTH_USERNAME);
+        String tenant = SettingsLoader.getProviderConfig().get(Constants.AUTH_TENANT);
+        String password = SettingsLoader.getProviderConfig().get(Constants.AUTH_PASSWORD);
 
         client = new VcdClientImpl(URI.create(serverUrl), serverVersion, securityContext);
         client.setCredentials(new VcdBasicLoginCredentials(username, tenant, password));
@@ -68,8 +68,8 @@ public class TmClientExample {
      * Only needed if your VCD instance is not using a well-signed certificate.
      */
     private static KeyStore getKeyStore() throws Exception {
-        String alias = SettingsLoader.getServerConfig().get(Constants.TRUSTSTORE_ALIAS);
-        String truststoreType = SettingsLoader.getServerConfig().get(Constants.TRUSTSTORE_TYPE);
+        String alias = SettingsLoader.getProviderConfig().get(Constants.TRUSTSTORE_ALIAS);
+        String truststoreType = SettingsLoader.getProviderConfig().get(Constants.TRUSTSTORE_TYPE);
 
         // Initialize KeyStore
         KeyStore keyStore = KeyStore.getInstance(truststoreType);
@@ -82,7 +82,7 @@ public class TmClientExample {
         }
 
         // Fetch and add the certificate if not already present
-        X509Certificate[] cert = CertificateUtil.getVcfCert(URI.create(SettingsLoader.getServerConfig().get(Constants.SERVER_URL)));
+        X509Certificate[] cert = CertificateUtil.getVcfCert(URI.create(SettingsLoader.getProviderConfig().get(Constants.SERVER_URL)));
         if (cert != null && cert.length > 0) {
             keyStore.setCertificateEntry(alias, cert[cert.length - 1]);
             System.out.println("Added new certificate to KeyStore with alias: " + alias);

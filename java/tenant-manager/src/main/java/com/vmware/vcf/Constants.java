@@ -10,10 +10,11 @@ package com.vmware.vcf;
 public class Constants {
     public static final String SETTINGS_FILE = "application.yaml";
     public static final String SERVER_URL = "url";
-    public static final String SERVER_VERSION = "server.version";
-    public static final String AUTH_USERNAME = "auth.username";
-    public static final String AUTH_TENANT = "auth.tenant";
-    public static final String AUTH_PASSWORD = "auth.password";
-    public static final String TRUSTSTORE_ALIAS = "truststore.alias";
-    public static final String TRUSTSTORE_TYPE = "truststore.type";
+    public static final String SERVER_VERSION = "api_version";
+    public static final String AUTH_USERNAME = "username";
+    public static final String AUTH_TENANT = "org_name";
+    public static final String AUTH_PASSWORD = "password";
+    public static final String TRUSTSTORE = "truststore";
+    public static final String TRUSTSTORE_ALIAS = "alias";
+    public static final String TRUSTSTORE_TYPE = "type";
 }

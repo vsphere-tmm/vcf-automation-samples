@@ -9,13 +9,14 @@ package com.vmware.vcf;
 
 import org.yaml.snakeyaml.Yaml;
 import com.vmware.vcfa.util.ConfigReader;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Map;
 
 public class SettingsLoader {
-    public static final String TM = "tm";
-    public static Map<String, String> serverConfig;
+    public static final String TM = "provider";
+    public static Map<String, String> providerConfig;
 
     private SettingsLoader() {
         try (InputStream input = ConfigReader.class.getClassLoader().getResourceAsStream(Constants.SETTINGS_FILE)) {
@@ -24,17 +25,28 @@ public class SettingsLoader {
             }
             final Yaml yaml = new Yaml();
             final Map<String, Object> data = yaml.load(input);
-            serverConfig = (Map<String, String>) data.get(TM);
+            Map<String, Object> vcfa = (Map<String, Object>) data.get("vcfa");
+            Map<String, Object> auth = (Map<String, Object>) vcfa.get("auth");
+
+            providerConfig = (Map<String, String>) auth.get(TM);
+            providerConfig.put(Constants.SERVER_URL, (String) vcfa.get(Constants.SERVER_URL));
+
+            Map<String, Object> ssl = (Map<String, Object>) vcfa.get("ssl");
+            Map<String, Object> trustStore = (Map<String, Object>) ssl.get(Constants.TRUSTSTORE);
+
+            providerConfig.put(Constants.TRUSTSTORE_ALIAS, (String) trustStore.get(Constants.TRUSTSTORE_ALIAS));
+            providerConfig.put(Constants.TRUSTSTORE_TYPE, (String) trustStore.get(Constants.TRUSTSTORE_TYPE));
+
         } catch (IOException e) {
             throw new RuntimeException("Failed to load settings file", e);
         }
     }
 
-    public static Map<String, String> getServerConfig() {
-        if (serverConfig == null) {
+    public static Map<String, String> getProviderConfig() {
+        if (providerConfig == null) {
             new SettingsLoader();
         }
-        return serverConfig;
+        return providerConfig;
     }
 }
 
