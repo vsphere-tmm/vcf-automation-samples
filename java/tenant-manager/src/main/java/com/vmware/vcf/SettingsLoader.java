@@ -29,7 +29,7 @@ public class SettingsLoader {
             Map<String, Object> auth = (Map<String, Object>) vcfa.get("auth");
 
             providerConfig = (Map<String, String>) auth.get(TM);
-            providerConfig.put(Constants.SERVER_URL, (String) vcfa.get(Constants.SERVER_URL));
+            providerConfig.put(Constants.SERVER_URL, String.format("%s/api", (String) vcfa.get(Constants.SERVER_URL)));
 
             Map<String, Object> ssl = (Map<String, Object>) vcfa.get("ssl");
             Map<String, Object> trustStore = (Map<String, Object>) ssl.get(Constants.TRUSTSTORE);
