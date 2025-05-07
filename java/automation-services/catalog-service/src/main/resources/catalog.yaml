@@ -2,6 +2,7 @@ catalog:
   target_project_id: "5cf01440-befa-4e1c-b155-7c0cbcf9d42f"
   catalog_item_id: "1e778590-9a67-3383-9250-6500d1c9aba6"
   deployment_name: "Test-samples-dep7"
+  deployment_id: "8733a5a9-05df-4653-93a0-755edf51465a"
   flavor_name: "small"
   image_name: "CONTENT-LIBRARY-VC03 / DND-e2e-onboarding-template-photon-dual-stack-with-additional-disk"
   cloud_zone_id: "dd42e3ce-d846-4411-8a90-1df9f3882abb"

@@ -36,7 +36,7 @@ Identify a vRA instance that is reachable from your machine and provide the foll
 - Create a blueprint and publish it as a catalog-item. Note the Id of this catalog item.
 
 
-#### 4. Create a deployment from the catalog Item
+#### Sample-1. Create a deployment from the catalog Item
 Configuration for running CatalogDeploymentSample.java
 - Add the deployment name, project Id and catalog Id from the above step into src/main/resources/catalog.yaml
 
@@ -44,7 +44,7 @@ Configuration for running CatalogDeploymentSample.java
 - Navigate to catalog-service/src/main/java/com/vmware/vcfa/samples/automation/catalog/CatalogDeploymentSample.java
 - Run the main() method
 
-#### 5. Create a VM Resource from image, flavor and zone
+#### Sample-2. Create a VM Resource from image, flavor and zone
 Configuration for running ResourceDeploymentSample
 - Add the   flavor_name, image_name,cloud_zone_id into src/main/resources/catalog.yaml
   - example
@@ -54,4 +54,15 @@ Configuration for running ResourceDeploymentSample
 
 **Run the main method in ResourceDeploymentSample.java**
 - Navigate to catalog-service/src/main/java/com/vmware/vcfa/samples/automation/catalog/ResourceDeploymentSample.java
+- Run the main() method
+
+
+#### Sample-3. View Deployment Properties
+Configuration for viewing Deployment Properties
+- Add the deployment_id of the deployment whose properties we need to view into src/main/resources/catalog.yaml
+  - example
+    - deployment_id: "8733a5a9-05df-4653-93a0-755edf51465a"
+
+**Run the main method in ViewDeploymentSample.java**
+- Navigate to catalog-service/src/main/java/com/vmware/vcfa/samples/automation/catalog/ViewDeploymentSample.java
 - Run the main() method

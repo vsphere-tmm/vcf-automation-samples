@@ -28,6 +28,9 @@ public class DeploymentInputReader {
     public String getDeploymentName() {
         return serverConfig.get("deployment_name");
     }
+    public String getDeploymentId() {
+        return serverConfig.get("deployment_id");
+    }
 
     public String getCatalogItemId() {
         return serverConfig.get("catalog_item_id");
