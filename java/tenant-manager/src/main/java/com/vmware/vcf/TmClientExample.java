@@ -7,6 +7,7 @@
  */
 package com.vmware.vcf;
 
+import java.util.List;
 import java.net.URI;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
@@ -19,7 +20,9 @@ import com.vmware.vcloud.api.rest.client.VcdBasicLoginCredentials;
 import com.vmware.vcloud.api.rest.client.VcdClient;
 import com.vmware.vcloud.api.rest.client.VcdClientImpl;
 import com.vmware.vcloud.rest.openapi.api.OrgApi;
+import com.vmware.vcloud.rest.openapi.api.VirtualCenterApi;
 import com.vmware.vcloud.rest.openapi.model.Orgs;
+import com.vmware.vcloud.rest.openapi.model.VCenterServer;
 
 /**
  * Tenant Manager client example that sets up certs, logs the user in and queries the orgs.
@@ -27,6 +30,7 @@ import com.vmware.vcloud.rest.openapi.model.Orgs;
 public class TmClientExample {
     private static VcdClientImpl client;
     private static OrgApi orgsApi = null;
+    private static VirtualCenterApi vcApi = null;
     private static CxfClientSecurityContext securityContext;
 
     public static void main(String[] args) throws Exception {
@@ -37,14 +41,21 @@ public class TmClientExample {
 
         final OpenApiClient client = getClient().getOpenApiClient();
         orgsApi = client.createProxy(OrgApi.class);
+        vcApi = client.createProxy(VirtualCenterApi.class);
 
         final Orgs orgs = getOrgs();
         System.out.println("Querying orgs result: " + orgs.getValues());
+        final List<VCenterServer> vcServers = getVirtualCenters();
+        System.out.println("Querying vCenters result: " + vcServers);
     }
 
     public static Orgs getOrgs() {
         final Orgs orgs = orgsApi.queryOrgs(1, 2, null, null, null);
         return orgs;
+    }
+
+    public static List<VCenterServer> getVirtualCenters() {
+        return vcApi.queryVirtualCenters(1, 20, null, null, null).getValues();
     }
 
     private static VcdClient getClient() throws GeneralSecurityException {
