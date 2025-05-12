@@ -28,12 +28,17 @@ public class DeploymentInputReader {
     public String getDeploymentName() {
         return serverConfig.get("deployment_name");
     }
+
     public String getDeploymentId() {
         return serverConfig.get("deployment_id");
     }
 
     public String getCatalogItemId() {
         return serverConfig.get("catalog_item_id");
+    }
+
+    public String getCloudTemplateId() {
+        return serverConfig.get("cloud_template_Id");
     }
 
     public String getflavorName() {
