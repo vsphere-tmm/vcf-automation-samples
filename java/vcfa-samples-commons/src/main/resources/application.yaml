@@ -1,11 +1,12 @@
 vcfa:
-  url: "https://<vcfa-host>"
+  url: "https://vcfa.172.20.53.59.vcfd.broadcom.net"
   auth:
     provider:
       org_name: "system"
-      username: "administrator"
-      password: "VMware"
+      username: "admin"
+      password: "IX7jefeBUK@PpkXTjXsi"
       api_version: "40.0"
+      storageClass: "Development"
     tenant:
       org_name: "coke"
       access_token: "null"
@@ -13,6 +14,6 @@ vcfa:
       password: "VMware"
   ssl:
     verify_ssl: true
-    trust_store:
+    truststore:
       alias: "TenantManagerCert"
       type: "JKS"

@@ -34,7 +34,7 @@ public class TmClientExample {
     private static CxfClientSecurityContext securityContext;
 
     public static void main(String[] args) throws Exception {
-        KeyStore truststore = getKeyStore();
+        KeyStore truststore = VcfUtils.getKeyStore();
         securityContext = CxfClientSecurityContext.getCxfClientSecurityContext(null, null, truststore, null, false);
 
         System.out.println("Using rest-api-client-1.0.0...");
@@ -74,35 +74,5 @@ public class TmClientExample {
 
         return client;
     }
-
-    /*
-     * Only needed if your VCD instance is not using a well-signed certificate.
-     */
-    private static KeyStore getKeyStore() throws Exception {
-        String alias = SettingsLoader.getProviderConfig().get(Constants.TRUSTSTORE_ALIAS);
-        String truststoreType = SettingsLoader.getProviderConfig().get(Constants.TRUSTSTORE_TYPE);
-
-        // Initialize KeyStore
-        KeyStore keyStore = KeyStore.getInstance(truststoreType);
-        keyStore.load(null, null);
-
-        // Check if the certificate is already present
-        if (keyStore.containsAlias(alias)) {
-            System.out.println("Certificate already exists in the KeyStore with alias: " + alias);
-            return keyStore;
-        }
-
-        // Fetch and add the certificate if not already present
-        X509Certificate[] cert = CertificateUtil.getVcfCert(URI.create(SettingsLoader.getProviderConfig().get(Constants.SERVER_URL)));
-        if (cert != null && cert.length > 0) {
-            keyStore.setCertificateEntry(alias, cert[cert.length - 1]);
-            System.out.println("Added new certificate to KeyStore with alias: " + alias);
-        } else {
-            System.out.println("No certificate found to add to KeyStore.");
-        }
-
-        return keyStore;
-    }
-
 
 }

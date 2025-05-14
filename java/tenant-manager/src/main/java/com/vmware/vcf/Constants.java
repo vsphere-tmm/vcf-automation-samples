@@ -17,4 +17,5 @@ public class Constants {
     public static final String TRUSTSTORE = "trust_store";
     public static final String TRUSTSTORE_ALIAS = "alias";
     public static final String TRUSTSTORE_TYPE = "type";
+    public static final String STORAGE_CLASS = "storageClass";
 }
