@@ -1,12 +1,15 @@
 package com.vmware.vcfa.util;
 
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URI;
 import java.net.URL;
 import java.security.KeyStore;
+import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.util.Base64;
@@ -23,6 +26,7 @@ import javax.net.ssl.X509TrustManager;
 public class ConfigReader {
 
     Map<String, String> tenantConfig;
+    String encodedPemCert = null;
 
 
     public ConfigReader() {
@@ -39,6 +43,7 @@ public class ConfigReader {
             Map<String, Object> ssl = (Map<String, Object>) vcfa.get("ssl");
             tenantConfig.put("verify_ssl", String.valueOf(ssl.get("verify_ssl")));
 
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -49,7 +54,9 @@ public class ConfigReader {
         boolean verifySsl = getVerifySsl();
         if (acces_token.equals("null")) {
             try {
-                acces_token = getAccessTokenWithSelfSignedCert(getServerUrl(), tenantConfig.get("username"), tenantConfig.get("password"), tenantConfig.get("org_name"), verifySsl);
+                InputStream sslCaCert = getSslCaCert(verifySsl);
+                acces_token = getAccessTokenWithSelfSignedCert(getServerUrl(), tenantConfig.get("username"), tenantConfig.get("password"), tenantConfig.get("org_name"), verifySsl, sslCaCert);
+                System.out.println("Successfully obtained access token for user:" + tenantConfig.get("username") + ", organization:" + tenantConfig.get("org_name"));
             } catch (Exception e) {
                 throw new RuntimeException(e);
             }
@@ -58,17 +65,36 @@ public class ConfigReader {
         return acces_token;
     }
 
+    public InputStream getSslCaCert(boolean verifySsl) {
+        InputStream sslCaCert = null;
+        if (verifySsl) {
+            String serverUrl = getServerUrl();
+            try {
+                if (this.encodedPemCert == null) {
+                    this.encodedPemCert = CertificateUtil.getEncodedCertificateStr((URI.create(serverUrl)));
+                }
+                sslCaCert = new ByteArrayInputStream(this.encodedPemCert.getBytes("UTF-8"));
+            } catch (CertificateEncodingException e) {
+                throw new RuntimeException(e);
+            } catch (UnsupportedEncodingException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        return sslCaCert;
+    }
+
+
     public String getAccessTokenWithSelfSignedCert(
             String tmUrl,
             String username,
             String password,
             String orgName,
-            boolean verifySSL) throws Exception {
+            boolean verifySSL,
+            InputStream sslCaCert) throws Exception {
 
         if (verifySSL) {
             // Load trusted cert from InputStream
             CertificateFactory cf = CertificateFactory.getInstance("X.509");
-            InputStream sslCaCert = CertificateUtil.getSSlCaCert(URI.create(tmUrl));
             X509Certificate cert = (X509Certificate) cf.generateCertificate(sslCaCert);
 
             KeyStore ks = KeyStore.getInstance(KeyStore.getDefaultType());

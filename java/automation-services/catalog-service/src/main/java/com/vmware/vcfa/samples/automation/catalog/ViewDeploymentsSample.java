@@ -36,7 +36,7 @@ public class ViewDeploymentsSample {
             boolean verifySsl = config.getVerifySsl();
             apiClient.setVerifyingSsl(verifySsl);
             if (verifySsl) {
-                apiClient.setSslCaCert(CertificateUtil.getSSlCaCert(URI.create(config.getServerUrl())));
+                apiClient.setSslCaCert(config.getSslCaCert(verifySsl));
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -50,6 +50,7 @@ public class ViewDeploymentsSample {
         catalogItemRequest.setDeploymentName(deploymentInputReader.getDeploymentName());
         catalogItemRequest.setProjectId(deploymentInputReader.getProjectId());
         try {
+            System.out.println("Fetching the details of the deployment with the Id:" + deploymentInputReader.getDeploymentId());
             Deployment deployment = deploymentsApi.getDeploymentById1(UUID.fromString(deploymentInputReader.getDeploymentId()), true, true, false, Set.of(), false);
             if (deployment.getId() != null) {
                 System.out.println(deployment.getName() + "with Id:" + deployment.getId() + " retrieved successfully.");

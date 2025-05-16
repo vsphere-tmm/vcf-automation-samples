@@ -37,7 +37,7 @@ public class CatalogDeploymentSample {
             boolean verifySsl = config.getVerifySsl();
             apiClient.setVerifyingSsl(verifySsl);
             if (verifySsl) {
-                apiClient.setSslCaCert(CertificateUtil.getSSlCaCert(URI.create(config.getServerUrl())));
+                apiClient.setSslCaCert(config.getSslCaCert(verifySsl));
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -52,9 +52,10 @@ public class CatalogDeploymentSample {
         catalogItemRequest.setProjectId(deploymentInputReader.getProjectId());
         UUID id = UUID.fromString(deploymentInputReader.getCatalogItemId());
         try {
+            System.out.println("Creating a deployment " + deploymentInputReader.getDeploymentName() + " from catalog item:"+deploymentInputReader.getCatalogItemId()+" in project" +catalogItemRequest.getProjectId());
             List<CatalogItemRequestResponse> responseList = catalogItemsApi.requestCatalogItemInstances1(id, catalogItemRequest);
             if (!responseList.isEmpty()) {
-                System.out.println(responseList.get(0).getDeploymentName() + "deployed successfully..");
+                System.out.println(responseList.get(0).getDeploymentName() + "deployed successfully.");
             }
 
         } catch (ApiException e) {

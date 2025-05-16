@@ -6,10 +6,8 @@ import com.vmware.vcfa.project_service.ApiClient;
 import com.vmware.vcfa.project_service.model.Principal;
 import com.vmware.vcfa.project_service.model.Project;
 import com.vmware.vcfa.project_service.model.ProjectSpecification;
-import com.vmware.vcfa.util.CertificateUtil;
 import com.vmware.vcfa.util.ConfigReader;
 
-import java.net.URI;
 import java.util.List;
 
 public class ProjectCRUDSample {
@@ -20,10 +18,7 @@ public class ProjectCRUDSample {
     public static void main(String[] args) {
         ProjectCRUDSample service = new ProjectCRUDSample();
         Project project = service.createProject();
-        System.out.println("Successfully created project " + project.getName());
-        System.out.println("Now deleting the project " + project.getName());
-        service.deleteProject(project.getId());
-        System.out.println("Successfully deleted the project " + project.getName());
+        service.deleteProject(project);
     }
 
     public ProjectCRUDSample() {
@@ -37,7 +32,7 @@ public class ProjectCRUDSample {
             boolean verifySsl = config.getVerifySsl();
             apiClient.setVerifyingSsl(verifySsl);
             if (verifySsl) {
-                apiClient.setSslCaCert(CertificateUtil.getSSlCaCert(URI.create(config.getServerUrl())));
+                apiClient.setSslCaCert(config.getSslCaCert(verifySsl));
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -54,19 +49,25 @@ public class ProjectCRUDSample {
      * @throws ApiException
      */
     public Project createProject() {
-        ProjectSpecification projectSpecification = buildProjectSpecification("sampleproject3",
+        String projectName = "sampleproject";
+        ProjectSpecification projectSpecification = buildProjectSpecification(projectName,
                 "fritz@coke.sqa-local.com", "user");
         try {
-            return projectApi.create(projectSpecification, false, Constants.API_VERSION);
+            System.out.println("Creating a project with name:" + projectName + ",user: fritz@coke.sqa-local.com");
+            Project project = projectApi.create(projectSpecification, false, Constants.API_VERSION);
+            System.out.println("Successfully created project " + projectName);
+            return project;
         } catch (ApiException e) {
             throw new RuntimeException(e);
         }
     }
 
 
-    public void deleteProject(String projectId) {
+    public void deleteProject(Project project) {
         try {
-            projectApi.deleteProject(projectId, "2019-01-15");
+            System.out.println("Deleting the project " + project.getName());
+            projectApi.deleteProject(project.getId(), "2019-01-15");
+            System.out.println("Successfully deleted the project " + project.getName());
         } catch (ApiException e) {
             System.out.println(e.getMessage());
         }

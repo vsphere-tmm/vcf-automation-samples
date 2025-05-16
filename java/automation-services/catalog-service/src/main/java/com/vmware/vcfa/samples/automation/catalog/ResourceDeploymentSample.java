@@ -38,7 +38,7 @@ public class ResourceDeploymentSample {
             boolean verifySsl = config.getVerifySsl();
             apiClient.setVerifyingSsl(verifySsl);
             if (verifySsl) {
-                apiClient.setSslCaCert(CertificateUtil.getSSlCaCert(URI.create(config.getServerUrl())));
+                apiClient.setSslCaCert(config.getSslCaCert(verifySsl));
             }
         } catch (Exception e) {
             throw new RuntimeException(e);
@@ -51,12 +51,13 @@ public class ResourceDeploymentSample {
         CatalogItemRequest catalogItemRequest = new CatalogItemRequest();
         catalogItemRequest.setDeploymentName(deploymentInputReader.getDeploymentName());
         catalogItemRequest.setProjectId(deploymentInputReader.getProjectId());
-
+        System.out.println("Creating vsphere machine specification with image "+deploymentInputReader.getImageName()+"flavor:"+deploymentInputReader.getflavorName());
+        System.out.println("Creating a new deployment:"+deploymentInputReader.getDeploymentName()+" for the machine in project:"+deploymentInputReader.getProjectId());
         ResourceSpecification resourceSpecification = getResourceSpecification();
         try {
             ResourceRequestResponse resourceRequestResponse = resourcesApi.createResource(resourceSpecification);
             if (resourceRequestResponse != null && resourceRequestResponse.getDeploymentId() != null) {
-                System.out.println("Resource is created as part of the deployment with the Id:" + resourceRequestResponse.getDeploymentId());
+                System.out.println("Vsphere Machine is created in the deployment with the Id:" + resourceRequestResponse.getDeploymentId());
             }
 
         } catch (ApiException e) {

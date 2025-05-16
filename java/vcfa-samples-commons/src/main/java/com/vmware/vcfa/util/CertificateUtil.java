@@ -64,21 +64,25 @@ public class CertificateUtil {
     public static InputStream getSSlCaCert(URI uri) {
         // Encode to Base64 with proper line breaks
         try {
-            X509Certificate[] certs = getVcfCert(uri);
-            X509Certificate cert = certs[certs.length - 1];
-            String base64 = Base64.getMimeEncoder(64, new byte[]{'\n'}).encodeToString(cert.getEncoded());
-
-            // Build PEM format string
-            String pem = "-----BEGIN CERTIFICATE-----\n" + base64 + "\n-----END CERTIFICATE-----\n";
+            String pem = getEncodedCertificateStr(uri);
 
             // Convert to InputStream
-
             return new ByteArrayInputStream(pem.getBytes("UTF-8"));
         } catch (UnsupportedEncodingException | CertificateEncodingException e) {
             System.out.println("Error while getting the certificate from the secure endpoint at the specified host " +
                     uri.getHost() + " and " + uri.getPort());
             throw new RuntimeException(e);
         }
+    }
+
+    public static String getEncodedCertificateStr(URI uri) throws CertificateEncodingException {
+        X509Certificate[] certs = getVcfCert(uri);
+        X509Certificate cert = certs[certs.length - 1];
+        String base64 = Base64.getMimeEncoder(64, new byte[]{'\n'}).encodeToString(cert.getEncoded());
+
+        // Build PEM format string
+        String pem = "-----BEGIN CERTIFICATE-----\n" + base64 + "\n-----END CERTIFICATE-----\n";
+        return pem;
     }
 
     /**
