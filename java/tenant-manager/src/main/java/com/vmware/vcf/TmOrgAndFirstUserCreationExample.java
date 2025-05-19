@@ -1,10 +1,15 @@
+/*
+ * ******************************************************************
+ * Copyright (c) 2025 Broadcom. All Rights Reserved.
+ * Broadcom Confidential. The term "Broadcom" refers to Broadcom Inc.
+ * and/or its subsidiaries.
+ * ******************************************************************
+ */
 package com.vmware.vcf;
 
 import java.net.URI;
-import java.security.GeneralSecurityException;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
@@ -22,9 +27,7 @@ import com.vmware.vcloud.rest.openapi.api.OrgApi;
 import com.vmware.vcloud.rest.openapi.api.RolesApi;
 import com.vmware.vcloud.rest.openapi.api.UserApi;
 import com.vmware.vcloud.rest.openapi.model.EntityReference;
-import com.vmware.vcloud.rest.openapi.model.EntityReferences;
 import com.vmware.vcloud.rest.openapi.model.Org;
-import com.vmware.vcloud.rest.openapi.model.Orgs;
 import com.vmware.vcloud.rest.openapi.model.Role;
 import com.vmware.vcloud.rest.openapi.model.Roles;
 import com.vmware.vcloud.rest.openapi.model.VcdUser;
@@ -32,7 +35,7 @@ import com.vmware.vcloud.rest.openapi.model.VcdUser;
 /**
  * Tenant Manager org creation example that creates an organization and an initial user.
  */
-public class TmOrgCreationExample {
+public class TmOrgAndFirstUserCreationExample {
 
     private static final int ORG_TASK_TIMEOUT_MILLIS = 10_000;
     private static final String SYSTEM_ORG_ID = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9";
@@ -67,6 +70,12 @@ public class TmOrgCreationExample {
 
         // Reset tenant context to the System org.
         openApiClient.setTenantContextHeader(SYSTEM_ORG_ID);
+
+        // Confirm the new org and user can be fetched
+        final Org foundOrg = orgsApi.getOrg(createdOrg.getId());
+        System.out.println("Found org: " + foundOrg);
+        final VcdUser foundUser = userApi.getUser(firstUser.getId());
+        System.out.println("Found user: " + foundUser);
     }
 
     private static void setup() throws Exception{
@@ -79,11 +88,6 @@ public class TmOrgCreationExample {
         orgsApi = openApiClient.createProxy(OrgApi.class);
         rolesApi = openApiClient.createProxy(RolesApi.class);
         userApi = openApiClient.createProxy(UserApi.class);
-    }
-
-    public static Orgs getOrgs() {
-        final Orgs orgs = orgsApi.queryOrgs(1, 2, null, null, null);
-        return orgs;
     }
 
     private static VcdClient getClient() {
