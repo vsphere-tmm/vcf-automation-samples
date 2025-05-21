@@ -1,12 +1,14 @@
 vcfa:
-  url: "https://vcfa.172.20.53.59.vcfd.broadcom.net"
+  url: "https:/<vcfa-host>"
   auth:
     provider:
       org_name: "system"
-      username: "admin"
-      password: "IX7jefeBUK@PpkXTjXsi"
+      username: "administrator"
+      password: "VMware"
       api_version: "40.0"
       storageClass: "Development"
+      updateRegionStorageClass: "VM Encryption Policy"
+      regionId: "urn:vcloud:region:xxxxx"
     tenant:
       org_name: "coke"
       access_token: "null"

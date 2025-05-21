@@ -14,8 +14,10 @@ public class Constants {
     public static final String AUTH_USERNAME = "username";
     public static final String AUTH_TENANT = "org_name";
     public static final String AUTH_PASSWORD = "password";
-    public static final String TRUSTSTORE = "trust_store";
+    public static final String TRUSTSTORE = "truststore";
     public static final String TRUSTSTORE_ALIAS = "alias";
     public static final String TRUSTSTORE_TYPE = "type";
     public static final String STORAGE_CLASS = "storageClass";
+    public static final String STORAGE_CLASS_TO_UPDATE_REGION = "updateRegionStorageClass";
+    public static final String REGION_ID = "regionId";
 }
