@@ -15,10 +15,8 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import javax.ws.rs.BadRequestException;
-import javax.xml.bind.JAXBElement;
 
 import com.vmware.cxfrestclient.CxfClientSecurityContext;
-import com.vmware.vcf.util.OrgLdapConfigUtil;
 import com.vmware.vcfa.util.CertificateUtil;
 import com.vmware.vcloud.api.rest.client.OpenApiClient;
 import com.vmware.vcloud.api.rest.client.VcdBasicLoginCredentials;
@@ -26,14 +24,14 @@ import com.vmware.vcloud.api.rest.client.VcdClient;
 import com.vmware.vcloud.api.rest.client.VcdClientImpl;
 import com.vmware.vcloud.api.rest.constants.RelationType;
 import com.vmware.vcloud.api.rest.constants.RestAdminConstants;
-import com.vmware.vcloud.api.rest.constants.RestConstants;
 import com.vmware.vcloud.api.rest.schema_v1_5.AdminOrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.CustomOrgLdapSettingsType;
+import com.vmware.vcloud.api.rest.schema_v1_5.OrgLdapGroupAttributesType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgLdapSettingsType;
+import com.vmware.vcloud.api.rest.schema_v1_5.OrgLdapUserAttributesType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.ReferenceType;
 import com.vmware.vcloud.api.rest.schema_v1_5.TaskType;
-import com.vmware.vcloud.api.rest.schema_v1_5.UserType;
 import com.vmware.vcloud.rest.openapi.api.OrgApi;
 import com.vmware.vcloud.rest.openapi.api.RolesApi;
 import com.vmware.vcloud.rest.openapi.api.UserApi;
@@ -43,15 +41,12 @@ import com.vmware.vcloud.rest.openapi.model.Role;
 import com.vmware.vcloud.rest.openapi.model.Roles;
 import com.vmware.vcloud.rest.openapi.model.VcdUser;
 
-import static com.vmware.vcloud.api.rest.constants.RelationType.ADD;
-import static com.vmware.vcloud.api.rest.constants.RestAdminConstants.MediaType.USERM;
-
 /**
  * Tenant Manager IDP user import example that details how to import users from LDAP, OIDC, and SAML.
  */
 public class TmImportIdpUserExample {
 
-    // LDAP Server VARS
+    // LDAP CONFIG VARS
     public static final String LDAP_SERVER_BASE_DN = "dc=vsphere,dc=local";
     private static final URI LDAP_SERVER_URI = URI.create("lvn-epc-dev-181.lvn.broadcom.net");
     private static final String LDAP_SERVER_USER_DN = "cn=Administrator,cn=Users,dc=vsphere,dc=local";
@@ -60,6 +55,11 @@ public class TmImportIdpUserExample {
     private static final String ACTIVE_DIRECTORY_CONNECTOR_TYPE = "ACTIVE_DIRECTORY";
     private static final String LDAP_IMPORT_USERNAME = "Administrator";
 
+    // OIDC CONFIG VARS
+    // TODO ^^^
+
+    // SAML CONFIG VARS
+    // TODO ^^^
 
     private static final int ORG_TASK_TIMEOUT_MILLIS = 10_000;
     private static final String SYSTEM_ORG_ID = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9";
@@ -68,7 +68,7 @@ public class TmImportIdpUserExample {
     private static final String EXAMPLE_ORG_DISPLAY_NAME = "EXAMPLE_ORG";
     private static final String LOCAL_PROVIDER_TYPE = "LOCAL";
     private static final String ORG_ADMIN_ROLE_NAME = "Organization Administrator";
-    private static VcdClientImpl client;
+    private static VcdClientImpl vcdClient;
     private static OpenApiClient openApiClient;
     private static OrgApi orgsApi = null;
     private static RolesApi rolesApi = null;
@@ -76,6 +76,7 @@ public class TmImportIdpUserExample {
     private static CxfClientSecurityContext securityContext;
 
     public static void main(String[] args) throws Exception {
+        // Sets up the keystore, VCD Client, and API Clients
         setup();
 
         final Org createdOrg = createOrg(EXAMPLE_ORG_NAME, EXAMPLE_ORG_DESC, EXAMPLE_ORG_DISPLAY_NAME, true);
@@ -96,11 +97,13 @@ public class TmImportIdpUserExample {
          * This example will configure all three IDPs to demonstrate user import from each.
          * Implement the methods below as needed.
          */
-        configureLdap(adminOrg);  // See LDAP VARS for LDAP configuration example values.
-//        configureOidc();            // See OIDC VARS for LDAP configuration example values.
-//        configureSaml();            // See SAML VARS for LDAP configuration example values.
+        configureLdap(adminOrg);  // See "LDAP CONFIG VARS" [Line 50] for LDAP configuration values.
+        // TODO - OIDC and SAML config
+//        configureOidc();            // See "OIDC CONFIG VARS" [Line ??] for OIDC configuration values.
+//        configureSaml();            // See "SAML CONFIG VARS" [Line ??] for SAML configuration values.
 
         final VcdUser ldapImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "LDAP");
+
         // final VcdUser oidcImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "OIDC");
         // final VcdUser samlImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "SAML");
 
@@ -123,13 +126,15 @@ public class TmImportIdpUserExample {
         // System.out.println("Found SAML user: " + foundSamlUser);
     }
 
+    // SETUP
+    // --------------------------------------------------
     private static void setup() throws Exception{
         final KeyStore truststore = getKeyStore();
         securityContext = CxfClientSecurityContext.getCxfClientSecurityContext(null, null, truststore, null, false);
 
         System.out.println("Using rest-api-client-1.0.0...");
 
-        openApiClient = getClient().getOpenApiClient();
+        openApiClient = getVcdClient().getOpenApiClient();
         orgsApi = openApiClient.createProxy(OrgApi.class);
         rolesApi = openApiClient.createProxy(RolesApi.class);
         userApi = openApiClient.createProxy(UserApi.class);
@@ -164,9 +169,9 @@ public class TmImportIdpUserExample {
         return keyStore;
     }
 
-    private static VcdClient getClient() {
-        if (client != null) {
-            return client;
+    private static VcdClient getVcdClient() {
+        if (vcdClient != null) {
+            return vcdClient;
         }
 
         final String serverUrl = SettingsLoader.getProviderConfig().get(Constants.SERVER_URL);
@@ -175,12 +180,14 @@ public class TmImportIdpUserExample {
         final String tenant = SettingsLoader.getProviderConfig().get(Constants.AUTH_TENANT);
         final String password = SettingsLoader.getProviderConfig().get(Constants.AUTH_PASSWORD);
 
-        client = new VcdClientImpl(URI.create(serverUrl), serverVersion, securityContext);
-        client.setCredentials(new VcdBasicLoginCredentials(username, tenant, password));
+        vcdClient = new VcdClientImpl(URI.create(serverUrl), serverVersion, securityContext);
+        vcdClient.setCredentials(new VcdBasicLoginCredentials(username, tenant, password));
 
-        return client;
+        return vcdClient;
     }
 
+    // ORGANIZATIONS
+    // --------------------------------------------------
     public static Org createOrg(final String name, final String description, final String displayName,
                                 final Boolean isEnabled) throws BadRequestException {
         final Org newOrg = new Org()
@@ -202,77 +209,28 @@ public class TmImportIdpUserExample {
     private static Org waitForOrgCreateTask() {
         try {
             final String updateTaskLink = openApiClient.getLastTaskUri(orgsApi).toString();
-            final TaskType taskType = client.getTaskMonitor().waitForSuccess(updateTaskLink, ORG_TASK_TIMEOUT_MILLIS);
+            final TaskType taskType = vcdClient.getTaskMonitor().waitForSuccess(updateTaskLink, ORG_TASK_TIMEOUT_MILLIS);
             return orgsApi.getOrg(taskType.getOwner().getId());
         } catch (TimeoutException e) {
             throw new RuntimeException("Failed to wait for result of org update task.", e);
         }
     }
 
-    private static Role getRoleWithName(String roleName) {
-        final String roleNameFilter = "name==" + roleName;
-        final Roles foundRoles = rolesApi.queryTenantRoles(1, 1, roleNameFilter,null, null);
-        if (foundRoles.getResultTotal() == 0) {
-            throw new IllegalStateException("Unable to fetch role " + roleName);
-        }
-        return foundRoles.getValues().get(0);
-    }
-
-    private static VcdUser importIdpUser(String name, String password, String providerType,
-                                        Role role) {
-        final EntityReference roleEntityReference = new EntityReference().name(role.getName()).id(role.getId());
-        final List<EntityReference> roleEntityRefList =
-                roleEntityReference == null ? Collections.emptyList() : Collections.singletonList(roleEntityReference);
-        return new VcdUser()
-                .username(name)
-                .password(password)
-                .providerType(providerType)
-                .roleEntityRefs(roleEntityRefList);
-    }
-
-    public static void configureLdap(OrgType orgType) {
-        AdminOrgType adminOrg =
-                orgType instanceof AdminOrgType ? (AdminOrgType) orgType : client.getResource(
-                        orgType, RelationType.ALTERNATE,
-                        RestConstants.MediaType.ADMIN_ORGANIZATION, AdminOrgType.class);
-        OrgLdapSettingsType orgLdapSettings = adminOrg.getSettings().getOrgLdapSettings();
-        orgLdapSettings.setOrgLdapMode("CUSTOM");
-        CustomOrgLdapSettingsType customOrgLdapSettings =
-                client.getVCloudObjectFactory().createCustomOrgLdapSettingsType();
-        customOrgLdapSettings.setHostName(LDAP_SERVER_URI.getHost());
-        customOrgLdapSettings.setPort(LDAP_SERVER_URI.getPort());
-        customOrgLdapSettings.setSearchBase(LDAP_SERVER_BASE_DN);
-        customOrgLdapSettings.setUserName(LDAP_SERVER_USER_DN);
-        customOrgLdapSettings.setPassword(LDAP_SERVER_PASSWORD);
-        orgLdapSettings.setCustomOrgLdapSettings(customOrgLdapSettings);
-        customOrgLdapSettings.setAuthenticationMechanism(LDAP_TYPE_SIMPLE);
-
-        customOrgLdapSettings.setConnectorType(ACTIVE_DIRECTORY_CONNECTOR_TYPE);
-
-        customOrgLdapSettings.setUserAttributes(OrgLdapConfigUtil.getDefaultUserAttributes());
-        customOrgLdapSettings.setGroupAttributes(OrgLdapConfigUtil.getDefaultGroupAttributes());
-
-        orgLdapSettings.setCustomOrgLdapSettings(customOrgLdapSettings);
-        orgLdapSettings.setCustomUsersOu(LDAP_SERVER_BASE_DN);
-        client.putResource(
-                RestAdminConstants.MediaType.ORGANIZATION_LDAP_SETTINGSM, client
-                        .getVCloudObjectFactory().createOrgLdapSettings(orgLdapSettings),
-                OrgLdapSettingsType.class);
-    }
-
     public static AdminOrgType getAdminOrgFromOrgName(String orgName) {
-        final List<ReferenceType> orgRefList = client.getOrganizations();
+        final List<ReferenceType> orgRefList = vcdClient.getOrganizations();
         for (ReferenceType orgRef : orgRefList) {
             if (orgRef.getName().equals(orgName)) {
-                OrgType orgType = client.getResource(orgRef, OrgType.class);
-                return client.getResource(orgType, RelationType.ALTERNATE,
+                OrgType orgType = vcdClient.getResource(orgRef, OrgType.class);
+                return vcdClient.getResource(orgType, RelationType.ALTERNATE,
                         RestAdminConstants.MediaType.ORGANIZATIONM, AdminOrgType.class);
             }
         }
         return null;
     }
 
-    private static VcdUser importIdpUser(String username, Role role, String providerType) {
+    // USERS AND ROLES
+    // --------------------------------------------------
+    public static VcdUser importIdpUser(String username, Role role, String providerType) {
         final VcdUser user = buildVcdUser(username, LOCAL_PROVIDER_TYPE, role);
         return userApi.createUser(user);
     }
@@ -286,4 +244,90 @@ public class TmImportIdpUserExample {
                 .providerType(providerType)
                 .roleEntityRefs(roleEntityRefList);
     }
+
+    public static Role getRoleWithName(String roleName) {
+        final String roleNameFilter = "name==" + roleName;
+        final Roles foundRoles = rolesApi.queryTenantRoles(1, 1, roleNameFilter,null, null);
+        if (foundRoles.getResultTotal() == 0) {
+            throw new IllegalStateException("Unable to fetch role " + roleName);
+        }
+        return foundRoles.getValues().get(0);
+    }
+
+    // LDAP CONFIGURATION
+    // --------------------------------------------------
+
+    /**
+     * Configures the desired LDAP server in VCFA.
+     * See "LDAP Server VARS" [Line 50] for variable definitions.
+     */
+    public static void configureLdap(AdminOrgType adminOrg) {
+        // Set connection variables for LDAP server
+        CustomOrgLdapSettingsType customOrgLdapSettings = vcdClient.getVCloudObjectFactory().createCustomOrgLdapSettingsType();
+        customOrgLdapSettings.setHostName(LDAP_SERVER_URI.getHost());
+        customOrgLdapSettings.setPort(LDAP_SERVER_URI.getPort());
+        customOrgLdapSettings.setSearchBase(LDAP_SERVER_BASE_DN);
+        customOrgLdapSettings.setConnectorType(ACTIVE_DIRECTORY_CONNECTOR_TYPE);
+        customOrgLdapSettings.setIsSsl(false);
+        customOrgLdapSettings.setAuthenticationMechanism(LDAP_TYPE_SIMPLE);
+        customOrgLdapSettings.setUserName(LDAP_SERVER_USER_DN);  // Set username and password to blank for anonymous read
+        customOrgLdapSettings.setPassword(LDAP_SERVER_PASSWORD); // (As above)
+
+        // Set user and group attributes
+        customOrgLdapSettings.setUserAttributes(getDefaultUserAttributes());
+        customOrgLdapSettings.setGroupAttributes(getDefaultGroupAttributes());
+
+        // Update org settings with custom configuration
+        final OrgLdapSettingsType orgLdapSettings = adminOrg.getSettings().getOrgLdapSettings();
+        orgLdapSettings.setOrgLdapMode("CUSTOM");
+        orgLdapSettings.setCustomOrgLdapSettings(customOrgLdapSettings);
+        orgLdapSettings.setCustomUsersOu(LDAP_SERVER_BASE_DN);
+        vcdClient.putResource(
+                RestAdminConstants.MediaType.ORGANIZATION_LDAP_SETTINGSM, vcdClient
+                        .getVCloudObjectFactory().createOrgLdapSettings(orgLdapSettings),
+                OrgLdapSettingsType.class);
+    }
+
+    /**
+     * Sets default user attributes. Substitute as necessary.
+     */
+    private static OrgLdapUserAttributesType getDefaultUserAttributes() {
+        final OrgLdapUserAttributesType orgLdapUserAttributesType = new OrgLdapUserAttributesType();
+        orgLdapUserAttributesType.setObjectClass("user");
+        orgLdapUserAttributesType.setObjectIdentifier("objectGuid");
+        orgLdapUserAttributesType.setUserName("sAMAccountName");
+        orgLdapUserAttributesType.setEmail("mail");
+        orgLdapUserAttributesType.setFullName("displayName");
+        orgLdapUserAttributesType.setGivenName("givenName");
+        orgLdapUserAttributesType.setTelephone("telephoneNumber");
+        orgLdapUserAttributesType.setSurname("sn");
+        orgLdapUserAttributesType.setGroupMembershipIdentifier("dn");
+        orgLdapUserAttributesType.setGroupBackLinkIdentifier(null); // Optional
+        return orgLdapUserAttributesType;
+    }
+
+    /**
+     * Sets default group attributes. Substitute as necessary.
+     */
+    private static OrgLdapGroupAttributesType getDefaultGroupAttributes() {
+        final OrgLdapGroupAttributesType orgLdapGroupAttributesType = new OrgLdapGroupAttributesType();
+        orgLdapGroupAttributesType.setObjectClass("group");
+        orgLdapGroupAttributesType.setObjectIdentifier("objectGuid");
+        orgLdapGroupAttributesType.setGroupName("cn");
+        orgLdapGroupAttributesType.setMembership("member");
+        orgLdapGroupAttributesType.setMembershipIdentifier("dn");
+        orgLdapGroupAttributesType.setBackLinkIdentifier("objectSid");
+        orgLdapGroupAttributesType.setBackLinkIdentifier(null); // Optional
+        return orgLdapGroupAttributesType;
+    }
+
+
+    // OIDC CONFIGURATION
+    // --------------------------------------------------
+    // TODO ^^^
+
+
+    // SAML CONFIGURATION
+    // --------------------------------------------------
+    // TODO ^^^
 }
