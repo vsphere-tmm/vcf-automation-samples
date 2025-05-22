@@ -14,6 +14,7 @@ import java.security.cert.X509Certificate;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.stream.Collectors;
 
 import com.vmware.cxfrestclient.CxfClientSecurityContext;
 import com.vmware.vcfa.util.CertificateUtil;
@@ -26,9 +27,16 @@ import com.vmware.vcloud.api.rest.schema_v1_5.TaskType;
 import com.vmware.vcloud.rest.openapi.api.NsxManagersApi;
 import com.vmware.vcloud.rest.openapi.api.SupervisorClustersApi;
 import com.vmware.vcloud.rest.openapi.api.VirtualCenterApi;
+import com.vmware.vcloud.rest.openapi.model.EntityReference;
 import com.vmware.vcloud.rest.openapi.model.NsxManager;
 import com.vmware.vcloud.rest.openapi.model.Supervisor;
 import com.vmware.vcloud.rest.openapi.model.VCenterServer;
+import com.vmware.vcloud.rest.openapi.api.ContentLibraryApi;
+import com.vmware.vcloud.rest.openapi.api.RegionsApi;
+import com.vmware.vcloud.rest.openapi.api.StorageClassesApi;
+import com.vmware.vcloud.rest.openapi.model.ContentLibrary;
+import com.vmware.vcloud.rest.openapi.model.Region;
+import com.vmware.vcloud.rest.openapi.model.StorageClass;
 
 public class VcfUtils {
 
@@ -98,24 +106,67 @@ public class VcfUtils {
 		} catch (TimeoutException e) {
 			throw new RuntimeException(e);
 		}
-	}
+    }
 
-	public static List<Supervisor> getSupervisorsForVc(final String vcId, final OpenApiClient client) {
-		final SupervisorClustersApi supervisorApiProxy = client.createProxy(SupervisorClustersApi.class);
-		return supervisorApiProxy.getSupervisors(PAGE, PAGE_SIZE, "virtualCenter.id==" + vcId /* filter */,
-				null /* sortAsc */, null /* sortDesc */).getValues();
-	}
+    protected static List<Supervisor> getSupervisorsForVc(final String vcId, final OpenApiClient client) {
+        final SupervisorClustersApi supervisorApiProxy = client.createProxy(SupervisorClustersApi.class);
+        return supervisorApiProxy.getSupervisors(PAGE, PAGE_SIZE, "virtualCenter.id==" + vcId, null /*sortAsc*/, null/*sortDesc*/).getValues();
+    }
 
-	public static VCenterServer getVc(final OpenApiClient client) {
-		final VirtualCenterApi vcApiProxy = client.createProxy(VirtualCenterApi.class);
-		return vcApiProxy
-				.queryVirtualCenters(PAGE, PAGE_SIZE, null /* filter */, null /* sortAsc */, null /* sortDesc */)
-				.getValues().get(0);
-	}
+    protected static List<Supervisor> getSupervisorsForNsx(final String nsxManagerId, final OpenApiClient client) {
+        final String filter = String.format("nsxManagerId==%s", nsxManagerId);
+        final SupervisorClustersApi supervisorApiProxy = client.createProxy(SupervisorClustersApi.class);
+        return supervisorApiProxy.getSupervisors(PAGE, PAGE_SIZE, filter, null, null).getValues();
+    }
 
-	public static NsxManager getNsxManager(final OpenApiClient client) {
-		final NsxManagersApi nsxApiProxy = client.createProxy(NsxManagersApi.class);
-		return nsxApiProxy.getNsxManagers(PAGE, PAGE_SIZE, null /* filter */, null /* sortAsc */, null /* sortDesc */)
-				.getValues().get(0);
+    protected static List<VCenterServer> getVcs(final OpenApiClient client) {
+        final VirtualCenterApi vcApiProxy = client.createProxy(VirtualCenterApi.class);
+        return vcApiProxy.queryVirtualCenters(PAGE, PAGE_SIZE, null /*filter*/, null /*sortAsc*/, null/*sortDesc*/).getValues();
+    }
+
+    protected static VCenterServer getVc(final OpenApiClient client) {
+        return getVcs(client).get(0);
+    }
+
+    protected static List<NsxManager> getNsxManagers(final OpenApiClient client) {
+        final NsxManagersApi nsxApiProxy = client.createProxy(NsxManagersApi.class);
+        return nsxApiProxy.getNsxManagers(PAGE, PAGE_SIZE, null /*filter*/, null /*sortAsc*/, null/*sortDesc*/).getValues();
+    }
+
+    protected static NsxManager getNsxManager(final OpenApiClient client) {
+        return getNsxManagers(client).get(0);
+    }
+
+    protected static List<Region> getRegions(final OpenApiClient client) {
+        final RegionsApi regionsApiProxy = client.createProxy(RegionsApi.class);
+        return regionsApiProxy.queryRegions(PAGE, PAGE_SIZE, null /*filter*/, null /*sortAsc*/, null/*sortDesc*/).getValues();
+    }
+
+    protected static List<StorageClass> getStorageClassesForRegion(final OpenApiClient client, final Region region) {
+        final String filter = String.format("region.id==%s", region.getId());
+        final StorageClassesApi storageClassesApiProxy = client.createProxy(StorageClassesApi.class);
+        return storageClassesApiProxy.queryStorageClasses(PAGE, PAGE_SIZE, filter, null /*sortAsc*/, null/*sortDesc*/).getValues();
+    }
+
+    protected static ContentLibrary getContentLibraryWithName(final OpenApiClient client,
+                                                              final String name) {
+        final String filter = String.format("name==%s", name);
+        final ContentLibraryApi contentLibraryApiProxy = client.createProxy(ContentLibraryApi.class);
+        List<ContentLibrary> contentLibraries = contentLibraryApiProxy.queryContentLibraries(PAGE, PAGE_SIZE, filter, null /*sortAsc*/, null/*sortDesc*/).getValues();
+        if (contentLibraries != null && !contentLibraries.isEmpty()) {
+            return contentLibraries.get(0);
+        }
+        return null;
+    }
+
+	protected static void printContentLibraryDetails(final ContentLibrary contentLibrary) {
+		System.out.println("Content Library name is: " + contentLibrary.getName());
+		System.out.println("Content Library description is: " + contentLibrary.getDescription());
+		System.out.println("Content Library storage class is: " + contentLibrary.getStorageClasses().stream().map(
+						EntityReference::getName)
+				.collect(Collectors.joining(",")));
+		System.out.println("Content Library is of type: " + contentLibrary.getLibraryType());
+		System.out.println("Content Library Organization is: " + contentLibrary.getOrg().getName());
+		System.out.println("Content Library status is: " + contentLibrary.getStatus());
 	}
 }
