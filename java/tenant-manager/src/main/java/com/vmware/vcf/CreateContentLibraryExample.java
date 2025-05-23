@@ -26,10 +26,6 @@ import com.vmware.vcloud.rest.openapi.model.Region;
 import com.vmware.vcloud.rest.openapi.model.StorageClass;
 import com.vmware.vcloud.rest.openapi.model.Supervisor;
 
-import org.apache.commons.collections4.CollectionUtils;
-import org.apache.commons.lang3.tuple.MutablePair;
-import org.apache.commons.lang3.tuple.Pair;
-
 public class CreateContentLibraryExample {
 
     private static VcdClient vcdClient;
@@ -50,19 +46,15 @@ public class CreateContentLibraryExample {
     }
 
     private static void setup() throws Exception {
-        if (vcdClient == null) {
-            vcdClient = VcfUtils.getClient();
-        }
-        openApiClient = VcfUtils.getClient().getOpenApiClient();
-        regionsApi = openApiClient.createProxy(RegionsApi.class);
-        contentLibraryApi = openApiClient.createProxy(ContentLibraryApi.class);
-
         final List<Region> currentRegions = VcfUtils.getRegions(openApiClient);
-        if (CollectionUtils.isNotEmpty(currentRegions)) {
+        if (currentRegions != null && !currentRegions.isEmpty()) {
+            System.out.println("Found " + currentRegions.size() + " regions in the VCFA instance");
             final Iterator<Region> regionIterator = currentRegions.iterator();
             region1 = regionIterator.next();
+            System.out.println("Using Region: " + region1.getName() + " as the first region");
             if (regionIterator.hasNext()) {
                 region2 = regionIterator.next();
+                System.out.println("Using Region: " + region2.getName() + " as the second region");
             }
         } else {
             storageClassName = SettingsLoader.getProviderConfig().get(Constants.STORAGE_CLASS);
@@ -71,22 +63,23 @@ public class CreateContentLibraryExample {
             final NsxManager nsxManager1 = nsxManagerIterator.next();
             final List<Supervisor> supervisorsForNsxManager1 = VcfUtils.getSupervisorsForNsx(nsxManager1.getId(), openApiClient);
             final Iterator<Supervisor> supervisorIterator = supervisorsForNsxManager1.iterator();
-            final Pair<NsxManager, Supervisor> nsxManagerSupervisorPair = new MutablePair<>(nsxManager1,
-                    supervisorIterator.next());
-            Pair<NsxManager, Supervisor> nsxManagerSupervisorPair2 = null;
+            final Supervisor supervisor1 = supervisorIterator.next();
+            NsxManager nsxManager2 = null;
+            Supervisor supervisor2 = null;
             if (nsxManagerIterator.hasNext()) {
-                final NsxManager nsxManager2 = nsxManagerIterator.next();
+                nsxManager2 = nsxManagerIterator.next();
                 final List<Supervisor> supervisorsForNsxManager2 = VcfUtils.getSupervisorsForNsx(nsxManager2.getId(), openApiClient);
-                if (CollectionUtils.isNotEmpty(supervisorsForNsxManager2)) {
-                    nsxManagerSupervisorPair2 = new MutablePair<>(nsxManager2, supervisorsForNsxManager2.iterator().next());
+                if (supervisorsForNsxManager2 != null && !supervisorsForNsxManager2.isEmpty()) {
+                    supervisor2 = supervisorsForNsxManager2.iterator().next();
                 }
             }
-            region1 = prepareRegionForVcAndNsxManager(nsxManagerSupervisorPair.getLeft(), nsxManagerSupervisorPair.getRight(), 1);
-            if (nsxManagerSupervisorPair2 != null) {
-                region2 = prepareRegionForVcAndNsxManager(nsxManagerSupervisorPair2.getLeft(), nsxManagerSupervisorPair2.getRight(), 2);
+            region1 = prepareRegionForVcAndNsxManager(nsxManager1, supervisor1, 1);
+            System.out.println("Created region "+ region1.getName() + " as region 1");
+            if (nsxManager2 != null && supervisor2 != null) {
+                region2 = prepareRegionForVcAndNsxManager(nsxManager2, supervisor2, 2);
+                System.out.println("Created region "+ region2.getName() + " as region 2");
             }
         }
-
     }
 
     private static Region prepareRegionForVcAndNsxManager(final NsxManager nsxManager, final Supervisor supervisor,
@@ -113,6 +106,7 @@ public class CreateContentLibraryExample {
         newContentLibrary.setDescription("Test content library description");
         newContentLibrary.setStorageClasses(Collections.singletonList(
                 new EntityReference().id(storageClass.getId()).name(storageClass.getName())));
+        System.out.println("Creating new content library with name: " + newContentLibrary.getName() + " and storage class " + storageClass.getName());
         contentLibraryApi.createContentLibrary(newContentLibrary);
         final TaskType task = openApiClient.getLastTask(contentLibraryApi);
         VcfUtils.waitForTaskWithSuccessStatus(URI.create(task.getHref()));
