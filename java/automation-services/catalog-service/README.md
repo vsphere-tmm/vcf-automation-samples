@@ -66,3 +66,11 @@ Configuration for viewing Deployment Properties
 **Run the main method in ViewDeploymentSample.java**
 - Navigate to catalog-service/src/main/java/com/vmware/vcfa/samples/automation/catalog/ViewDeploymentSample.java
 - Run the main() method
+
+
+#### Sample-4. Create Deployment limit policy
+The sample creates a cpu, memory and storage limit policy for each deployment and limits for each machine.
+
+**Run the main method in CreateDeploymentLimitPolicySample.java**
+- Navigate to catalog-service/src/main/java/com/vmware/vcfa/samples/automation/catalog/CreateDeploymentLimitPolicySample.java
+- Run the main() method

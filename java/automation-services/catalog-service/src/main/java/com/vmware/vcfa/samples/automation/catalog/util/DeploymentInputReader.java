@@ -37,9 +37,6 @@ public class DeploymentInputReader {
         return serverConfig.get("catalog_item_id");
     }
 
-    public String getCloudTemplateId() {
-        return serverConfig.get("cloud_template_Id");
-    }
 
     public String getflavorName() {
         return serverConfig.get("flavor_name");
