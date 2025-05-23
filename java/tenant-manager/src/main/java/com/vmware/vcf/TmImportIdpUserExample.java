@@ -7,6 +7,7 @@
  */
 package com.vmware.vcf;
 
+import java.net.MalformedURLException;
 import java.net.URI;
 import java.security.KeyStore;
 import java.security.cert.X509Certificate;
@@ -15,6 +16,7 @@ import java.util.List;
 import java.util.concurrent.TimeoutException;
 
 import javax.ws.rs.BadRequestException;
+import javax.xml.bind.JAXBElement;
 
 import com.vmware.cxfrestclient.CxfClientSecurityContext;
 import com.vmware.vcfa.util.CertificateUtil;
@@ -22,13 +24,21 @@ import com.vmware.vcloud.api.rest.client.OpenApiClient;
 import com.vmware.vcloud.api.rest.client.VcdBasicLoginCredentials;
 import com.vmware.vcloud.api.rest.client.VcdClient;
 import com.vmware.vcloud.api.rest.client.VcdClientImpl;
+import com.vmware.vcloud.api.rest.client.VcdUtils;
 import com.vmware.vcloud.api.rest.constants.RelationType;
 import com.vmware.vcloud.api.rest.constants.RestAdminConstants;
 import com.vmware.vcloud.api.rest.schema_v1_5.AdminOrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.CustomOrgLdapSettingsType;
+import com.vmware.vcloud.api.rest.schema_v1_5.LinkType;
+import com.vmware.vcloud.api.rest.schema_v1_5.OIDCAttributeMappingType;
+import com.vmware.vcloud.api.rest.schema_v1_5.ObjectFactory;
+import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderConfigurationType;
+import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderInfoType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgLdapGroupAttributesType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgLdapSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgLdapUserAttributesType;
+import com.vmware.vcloud.api.rest.schema_v1_5.OrgOAuthSettingsType;
+import com.vmware.vcloud.api.rest.schema_v1_5.OrgSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.ReferenceType;
 import com.vmware.vcloud.api.rest.schema_v1_5.TaskType;
@@ -40,6 +50,8 @@ import com.vmware.vcloud.rest.openapi.model.Org;
 import com.vmware.vcloud.rest.openapi.model.Role;
 import com.vmware.vcloud.rest.openapi.model.Roles;
 import com.vmware.vcloud.rest.openapi.model.VcdUser;
+
+import org.apache.commons.lang3.StringUtils;
 
 /**
  * Tenant Manager IDP user import example that details how to import users from LDAP, OIDC, and SAML.
@@ -56,17 +68,21 @@ public class TmImportIdpUserExample {
     private static final String LDAP_IMPORT_USERNAME = "Administrator";
 
     // OIDC CONFIG VARS
-    // TODO ^^^
+    private static final String OIDC_IMPORT_USERNAME = "brianh1_test";
+    private static final URI OIDC_PROVIDER_CONFIG_ENDPOINT = URI.create("https://ip-205.net-101.vm.sof-mbu.broadcom.net/SAAS/auth/.well-known/openid-configuration");
+    private static final String OIDC_CLIENT_ID = "brianh1_oidc_client";
+    private static final String OIDC_CLIENT_SECRET = "w3biMyWpuL01EKV27duWEHQzFNUNLU6b0Wpd0EdKqGzNeeyF";
 
     // SAML CONFIG VARS
     // TODO ^^^
+    private static final String SAML_IMPORT_USERNAME = "Administrator";
+
 
     private static final int ORG_TASK_TIMEOUT_MILLIS = 10_000;
     private static final String SYSTEM_ORG_ID = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9";
     private static final String EXAMPLE_ORG_NAME = "exampleOrg";
     private static final String EXAMPLE_ORG_DESC = "An example organization.";
     private static final String EXAMPLE_ORG_DISPLAY_NAME = "EXAMPLE_ORG";
-    private static final String LOCAL_PROVIDER_TYPE = "LOCAL";
     private static final String ORG_ADMIN_ROLE_NAME = "Organization Administrator";
     private static VcdClientImpl vcdClient;
     private static OpenApiClient openApiClient;
@@ -89,27 +105,26 @@ public class TmImportIdpUserExample {
 
         // A separate org type is used to configure IDPs.
         final AdminOrgType adminOrg = getAdminOrgFromOrgName(createdOrg.getName());
-
-
         /*
          * Configure the IDP in VCFA.
          * --------------------------
          * This example will configure all three IDPs to demonstrate user import from each.
          * Implement the methods below as needed.
          */
-        configureLdap(adminOrg);  // See "LDAP CONFIG VARS" [Line 50] for LDAP configuration values.
-        // TODO - OIDC and SAML config
-//        configureOidc();            // See "OIDC CONFIG VARS" [Line ??] for OIDC configuration values.
-//        configureSaml();            // See "SAML CONFIG VARS" [Line ??] for SAML configuration values.
+        configureLdapInOrg(adminOrg);  // See "LDAP CONFIG VARS" [Line 50] for LDAP configuration values.
+        configureOidcInOrg(adminOrg);  // See "OIDC CONFIG VARS" [Line 70] for OIDC configuration values.
+
+        // TODO - SAML config
+        configureSamlInOrg(adminOrg);  // See "SAML CONFIG VARS" [Line 76] for SAML configuration values.
 
         final VcdUser ldapImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "LDAP");
 
-        // final VcdUser oidcImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "OIDC");
-        // final VcdUser samlImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "SAML");
+        final VcdUser oidcImportedUser = importIdpUser(OIDC_IMPORT_USERNAME, orgAdminRole, "OIDC");
+        final VcdUser samlImportedUser = importIdpUser(SAML_IMPORT_USERNAME, orgAdminRole, "SAML");
 
         System.out.printf("Imported LDAP user %s in org %s: %s%n", ldapImportedUser.getUsername(), createdOrg.getName(), ldapImportedUser);
-        // System.out.printf("Imported OIDC user %s in org %s: %s%n", oidcImportedUser.getUsername(), createdOrg.getName(), oidcImportedUser);
-        // System.out.printf("Imported SAML user %s in org %s: %s%n", samlImportedUser.getUsername(), createdOrg.getName(), samlImportedUser);
+        System.out.printf("Imported OIDC user %s in org %s: %s%n", oidcImportedUser.getUsername(), createdOrg.getName(), oidcImportedUser);
+        System.out.printf("Imported SAML user %s in org %s: %s%n", samlImportedUser.getUsername(), createdOrg.getName(), samlImportedUser);
 
         // Reset tenant context to the System org.
         openApiClient.setTenantContextHeader(SYSTEM_ORG_ID);
@@ -120,10 +135,10 @@ public class TmImportIdpUserExample {
 
         final VcdUser foundLdapUser = userApi.getUser(ldapImportedUser.getId());
         System.out.println("Found LDAP user: " + foundLdapUser);
-        // final VcdUser foundOidcUser = userApi.getUser(oidcImportedUser.getId());
-        // System.out.println("Found OIDC user: " + foundOidcUser);
-        // final VcdUser foundSamlUser = userApi.getUser(samlImportedUser.getId());
-        // System.out.println("Found SAML user: " + foundSamlUser);
+        final VcdUser foundOidcUser = userApi.getUser(oidcImportedUser.getId());
+        System.out.println("Found OIDC user: " + foundOidcUser);
+        final VcdUser foundSamlUser = userApi.getUser(samlImportedUser.getId());
+        System.out.println("Found SAML user: " + foundSamlUser);
     }
 
     // SETUP
@@ -231,7 +246,7 @@ public class TmImportIdpUserExample {
     // USERS AND ROLES
     // --------------------------------------------------
     public static VcdUser importIdpUser(String username, Role role, String providerType) {
-        final VcdUser user = buildVcdUser(username, LOCAL_PROVIDER_TYPE, role);
+        final VcdUser user = buildVcdUser(username, providerType, role);
         return userApi.createUser(user);
     }
 
@@ -261,7 +276,7 @@ public class TmImportIdpUserExample {
      * Configures the desired LDAP server in VCFA.
      * See "LDAP Server VARS" [Line 50] for variable definitions.
      */
-    public static void configureLdap(AdminOrgType adminOrg) {
+    public static void configureLdapInOrg(AdminOrgType adminOrg) {
         // Set connection variables for LDAP server
         CustomOrgLdapSettingsType customOrgLdapSettings = vcdClient.getVCloudObjectFactory().createCustomOrgLdapSettingsType();
         customOrgLdapSettings.setHostName(LDAP_SERVER_URI.getHost());
@@ -321,13 +336,59 @@ public class TmImportIdpUserExample {
         return orgLdapGroupAttributesType;
     }
 
-
     // OIDC CONFIGURATION
     // --------------------------------------------------
-    // TODO ^^^
+    public static void configureOidcInOrg(AdminOrgType adminOrg) {
+        // Retrieve org OAuth settings.
+        final OrgSettingsType orgSettings = adminOrg.getSettings();
+        final OrgOAuthSettingsType oAuthSettingsType = orgSettings.getOrgOAuthSettings();
+        final LinkType providerConfigLink =
+                VcdUtils.findLink(oAuthSettingsType.getLink(), RestAdminConstants.MediaType.OPENID_PROVIDER_CONFIG);
 
+        // Configure OpenID Provider configuration using a well-known configuration endpoint.
+        final OpenIdProviderInfoType providerInfo = new OpenIdProviderInfoType();
+        providerInfo.setOpenIdProviderConfigurationEndpoint(OIDC_PROVIDER_CONFIG_ENDPOINT.toString());
+        final ObjectFactory objectFactory = vcdClient.getVCloudObjectFactory();
+        final OpenIdProviderConfigurationType providerConfig = vcdClient.postResource(
+                URI.create(providerConfigLink.getHref()), RestAdminConstants.MediaType.OPENID_PROVIDER_INFO,
+                objectFactory.createOpenIdProviderInfo(providerInfo),
+                OpenIdProviderConfigurationType.class);
+
+        // Configure the OIDC client.
+        final OrgOAuthSettingsType orgOAuthSettings = providerConfig.getOrgOAuthSettings();
+        orgOAuthSettings.setClientId(OIDC_CLIENT_ID);
+        orgOAuthSettings.setClientSecret(OIDC_CLIENT_SECRET);
+        orgOAuthSettings.setEnabled(true);
+        orgOAuthSettings.setMaxClockSkew(120);
+
+        // Configure OIDC attribute mappings.
+        orgOAuthSettings.getOIDCAttributeMapping().setGroupsAttributeName("groups");
+        orgOAuthSettings.getOIDCAttributeMapping().setRolesAttributeName("roles");
+        orgOAuthSettings.getOIDCAttributeMapping().setSubjectAttributeName("email");
+        orgOAuthSettings.getOIDCAttributeMapping().setNameInSourceAttributeName("email");
+
+        // Update org OAuth settings with configured values.
+        updateOAuthSettings(adminOrg, orgOAuthSettings);
+    }
+
+    private static OrgOAuthSettingsType updateOAuthSettings(AdminOrgType adminOrg, OrgOAuthSettingsType settings) {
+
+        final JAXBElement<OrgOAuthSettingsType> jabxOrgOAuthSettings =
+                vcdClient.getVCloudObjectFactory().createOrgOAuthSettings(settings);
+
+        final String settingsHref = settings.getHref();
+        if (settingsHref != null) {
+            return vcdClient.putResource(URI.create(settingsHref), RestAdminConstants.MediaType.ORGANIZATION_OAUTH_SETTINGSM,
+                    jabxOrgOAuthSettings, OrgOAuthSettingsType.class);
+        }
+
+        return vcdClient.putResource(adminOrg.getSettings(), RelationType.DOWN,
+                RestAdminConstants.MediaType.ORGANIZATION_OAUTH_SETTINGSM, jabxOrgOAuthSettings, OrgOAuthSettingsType.class);
+    }
 
     // SAML CONFIGURATION
     // --------------------------------------------------
-    // TODO ^^^
+    public void configureSamlInOrg(AdminOrgType adminOrgType) {
+        // TODO - Implementation
+    }
 }
