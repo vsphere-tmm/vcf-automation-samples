@@ -7,14 +7,28 @@
  */
 package com.vmware.vcf;
 
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.io.StringWriter;
 import java.net.MalformedURLException;
 import java.net.URI;
+import java.net.URL;
 import java.security.KeyStore;
+import java.security.SecureRandom;
+import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
+import javax.net.ssl.HostnameVerifier;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLSession;
+import javax.net.ssl.SSLSocketFactory;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.X509TrustManager;
 import javax.ws.rs.BadRequestException;
 import javax.xml.bind.JAXBElement;
 
@@ -34,6 +48,7 @@ import com.vmware.vcloud.api.rest.schema_v1_5.OIDCAttributeMappingType;
 import com.vmware.vcloud.api.rest.schema_v1_5.ObjectFactory;
 import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderConfigurationType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderInfoType;
+import com.vmware.vcloud.api.rest.schema_v1_5.OrgFederationSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgLdapGroupAttributesType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgLdapSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgLdapUserAttributesType;
@@ -41,7 +56,9 @@ import com.vmware.vcloud.api.rest.schema_v1_5.OrgOAuthSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.ReferenceType;
+import com.vmware.vcloud.api.rest.schema_v1_5.SamlAttributeMappingType;
 import com.vmware.vcloud.api.rest.schema_v1_5.TaskType;
+import com.vmware.vcloud.api.rest.version.ApiVersion;
 import com.vmware.vcloud.rest.openapi.api.OrgApi;
 import com.vmware.vcloud.rest.openapi.api.RolesApi;
 import com.vmware.vcloud.rest.openapi.api.UserApi;
@@ -74,7 +91,7 @@ public class TmImportIdpUserExample {
     private static final String OIDC_CLIENT_SECRET = "w3biMyWpuL01EKV27duWEHQzFNUNLU6b0Wpd0EdKqGzNeeyF";
 
     // SAML CONFIG VARS
-    // TODO ^^^
+    private static final String SAML_METADATA_URL_STRING = "";
     private static final String SAML_IMPORT_USERNAME = "Administrator";
 
 
@@ -113,8 +130,6 @@ public class TmImportIdpUserExample {
          */
         configureLdapInOrg(adminOrg);  // See "LDAP CONFIG VARS" [Line 50] for LDAP configuration values.
         configureOidcInOrg(adminOrg);  // See "OIDC CONFIG VARS" [Line 70] for OIDC configuration values.
-
-        // TODO - SAML config
         configureSamlInOrg(adminOrg);  // See "SAML CONFIG VARS" [Line 76] for SAML configuration values.
 
         final VcdUser ldapImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "LDAP");
@@ -292,15 +307,19 @@ public class TmImportIdpUserExample {
         customOrgLdapSettings.setUserAttributes(getDefaultUserAttributes());
         customOrgLdapSettings.setGroupAttributes(getDefaultGroupAttributes());
 
-        // Update org settings with custom configuration
+        // Configure org settings to use custom LDAP settings.
         final OrgLdapSettingsType orgLdapSettings = adminOrg.getSettings().getOrgLdapSettings();
         orgLdapSettings.setOrgLdapMode("CUSTOM");
         orgLdapSettings.setCustomOrgLdapSettings(customOrgLdapSettings);
         orgLdapSettings.setCustomUsersOu(LDAP_SERVER_BASE_DN);
-        vcdClient.putResource(
+
+        // Update the org LDAP settings with custom configuration.
+        final OrgLdapSettingsType updatedLdapSettings = vcdClient.putResource(
                 RestAdminConstants.MediaType.ORGANIZATION_LDAP_SETTINGSM, vcdClient
                         .getVCloudObjectFactory().createOrgLdapSettings(orgLdapSettings),
                 OrgLdapSettingsType.class);
+        System.out.printf("Configured LDAP for org %s: %s", adminOrg.getName(), updatedLdapSettings);
+
     }
 
     /**
@@ -371,24 +390,125 @@ public class TmImportIdpUserExample {
         updateOAuthSettings(adminOrg, orgOAuthSettings);
     }
 
-    private static OrgOAuthSettingsType updateOAuthSettings(AdminOrgType adminOrg, OrgOAuthSettingsType settings) {
-
+    private static void updateOAuthSettings(AdminOrgType adminOrg, OrgOAuthSettingsType settings) {
+        // Retrieve VCFA OAuth settings.
         final JAXBElement<OrgOAuthSettingsType> jabxOrgOAuthSettings =
                 vcdClient.getVCloudObjectFactory().createOrgOAuthSettings(settings);
 
+        // Update the OAuth settings with custom settings.
         final String settingsHref = settings.getHref();
+        final OrgOAuthSettingsType updatedOauthSettings;
         if (settingsHref != null) {
-            return vcdClient.putResource(URI.create(settingsHref), RestAdminConstants.MediaType.ORGANIZATION_OAUTH_SETTINGSM,
+            updatedOauthSettings = vcdClient.putResource(URI.create(settingsHref), RestAdminConstants.MediaType.ORGANIZATION_OAUTH_SETTINGSM,
                     jabxOrgOAuthSettings, OrgOAuthSettingsType.class);
+        } else {
+            updatedOauthSettings = vcdClient.putResource(adminOrg.getSettings(), RelationType.DOWN,
+                    RestAdminConstants.MediaType.ORGANIZATION_OAUTH_SETTINGSM, jabxOrgOAuthSettings, OrgOAuthSettingsType.class);
         }
-
-        return vcdClient.putResource(adminOrg.getSettings(), RelationType.DOWN,
-                RestAdminConstants.MediaType.ORGANIZATION_OAUTH_SETTINGSM, jabxOrgOAuthSettings, OrgOAuthSettingsType.class);
+        System.out.printf("Configured OIDC for org %s: %s", adminOrg.getName(), updatedOauthSettings);
     }
 
     // SAML CONFIGURATION
     // --------------------------------------------------
-    public void configureSamlInOrg(AdminOrgType adminOrgType) {
-        // TODO - Implementation
+    public static void configureSamlInOrg(final AdminOrgType adminOrg) {
+        try {
+            // Download SAML IDP metadata to configure within VCFA.
+            // ### SHOULD WE BE DOWNLOADING THE METADATA OR ASSUME THE USER HAS IT LOCALLY? THIS ADDS MORE COMPLEXITY TO THE EXAMPLE ###
+            final URL samlMetadataUri = new URL(SAML_METADATA_URL_STRING);
+            final String ipSamlMetadata =
+                    downloadMetadata(samlMetadataUri);
+
+            // Update SAML settings with downloaded metadata.
+            updateOrgFederationSettings(ipSamlMetadata, true, adminOrg);
+
+        } catch (Exception e) {
+            throw new Error(e);
+        }
     }
+
+    private static void updateOrgFederationSettings(final String ipSamlMetadata,
+                                             final boolean enableFederation,
+                                             final AdminOrgType adminOrg) {
+        final OrgFederationSettingsType existingOrgFederationSettings =
+                adminOrg.getSettings().getOrgFederationSettings();
+
+        // Setup basic SAML settings for the org.
+        final ObjectFactory objectFactory = vcdClient.getVCloudObjectFactory();
+        final OrgFederationSettingsType federationSettingsType =
+                objectFactory.createOrgFederationSettingsType();
+        federationSettingsType.setEnabled(enableFederation);
+        federationSettingsType.setSAMLMetadata(ipSamlMetadata);
+
+        // Configure certificates.
+        federationSettingsType
+                .setSigningCertLibraryItemId(existingOrgFederationSettings.getSigningCertLibraryItemId());
+        federationSettingsType.setEncryptionCertLibraryItemId(
+                existingOrgFederationSettings.getEncryptionCertLibraryItemId());
+
+        final JAXBElement<OrgFederationSettingsType> federationSettings =
+                objectFactory.createOrgFederationSettings(federationSettingsType);
+
+        // Update the SAML settings.
+        final OrgFederationSettingsType updatedFederationSettings =
+                vcdClient.putResource(existingOrgFederationSettings, RelationType.EDIT,
+                        RestAdminConstants.MediaType.ORGANIZATION_FEDERATION_SETTINGSM,
+                        federationSettings, OrgFederationSettingsType.class);
+        System.out.printf("Configured SAML for org %s: %s", adminOrg.getName(), updatedFederationSettings);
+    }
+
+    /**
+     * UNSURE IF DOWNLOADING THE METADATA IS STRICTLY NECESSARY FOR THE BASE EXAMPLE.
+     * PERHAPS THE EXAMPLE SHOULD ASSUME THE USER HAS THEIR SAML METADATA XML LOCALLY DOWNLOADED.
+     * --------------------------------------------------------------------------------------------------------
+     */
+    private static String downloadMetadata(final URL samlMetadataUri) throws Exception {
+        final HttpsURLConnection connection = (HttpsURLConnection)samlMetadataUri.openConnection();
+        connection.setHostnameVerifier((arg0, arg1) -> true);
+        connection.setSSLSocketFactory(getPermissiveSSLSocketFactory());
+        connection.connect();
+        final BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+        final StringWriter sw = new StringWriter();
+        for ( ; ; ) {
+            final int character = reader.read();
+            if (character == -1) {
+                break;
+            }
+            sw.write(character);
+        }
+
+        sw.close();
+        reader.close();
+        connection.disconnect();
+
+        return sw.toString();
+    }
+
+    private static SSLSocketFactory getPermissiveSSLSocketFactory() throws Exception {
+        final SSLContext permissiveContext = SSLContext.getInstance("TLS");
+        permissiveContext.init(null,
+                new TrustManager[] { new X509TrustManager() {
+                    @Override
+                    public void checkClientTrusted(X509Certificate[] arg0, String arg1) {
+                        // Do nothing
+                    }
+
+                    @Override
+                    public void checkServerTrusted(X509Certificate[] arg0, String arg1) {
+                        // Do nothing
+                    }
+
+                    @Override
+                    public X509Certificate[] getAcceptedIssuers() {
+                        return null;
+                    }
+                }},
+                new SecureRandom());
+
+        return permissiveContext.getSocketFactory();
+    }
+    /**
+     * --------------------------------------------------------------------------------------------------------
+     * UNSURE IF DOWNLOADING THE METADATA IS STRICTLY NECESSARY FOR THE BASE EXAMPLE.
+     * PERHAPS THE EXAMPLE SHOULD ASSUME THE USER HAS THEIR SAML METADATA XML LOCALLY DOWNLOADED.
+     */
 }
