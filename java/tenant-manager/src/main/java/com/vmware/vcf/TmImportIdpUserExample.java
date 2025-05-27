@@ -8,24 +8,19 @@
 package com.vmware.vcf;
 
 import java.io.BufferedReader;
-import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
-import java.net.MalformedURLException;
 import java.net.URI;
 import java.net.URL;
 import java.security.KeyStore;
 import java.security.SecureRandom;
-import java.security.cert.CertificateException;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
-import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.HttpsURLConnection;
 import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSession;
 import javax.net.ssl.SSLSocketFactory;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
@@ -44,7 +39,6 @@ import com.vmware.vcloud.api.rest.constants.RestAdminConstants;
 import com.vmware.vcloud.api.rest.schema_v1_5.AdminOrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.CustomOrgLdapSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.LinkType;
-import com.vmware.vcloud.api.rest.schema_v1_5.OIDCAttributeMappingType;
 import com.vmware.vcloud.api.rest.schema_v1_5.ObjectFactory;
 import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderConfigurationType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderInfoType;
@@ -56,9 +50,7 @@ import com.vmware.vcloud.api.rest.schema_v1_5.OrgOAuthSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.ReferenceType;
-import com.vmware.vcloud.api.rest.schema_v1_5.SamlAttributeMappingType;
 import com.vmware.vcloud.api.rest.schema_v1_5.TaskType;
-import com.vmware.vcloud.api.rest.version.ApiVersion;
 import com.vmware.vcloud.rest.openapi.api.OrgApi;
 import com.vmware.vcloud.rest.openapi.api.RolesApi;
 import com.vmware.vcloud.rest.openapi.api.UserApi;
@@ -67,8 +59,6 @@ import com.vmware.vcloud.rest.openapi.model.Org;
 import com.vmware.vcloud.rest.openapi.model.Role;
 import com.vmware.vcloud.rest.openapi.model.Roles;
 import com.vmware.vcloud.rest.openapi.model.VcdUser;
-
-import org.apache.commons.lang3.StringUtils;
 
 /**
  * Tenant Manager IDP user import example that details how to import users from LDAP, OIDC, and SAML.
@@ -91,16 +81,18 @@ public class TmImportIdpUserExample {
     private static final String OIDC_CLIENT_SECRET = "w3biMyWpuL01EKV27duWEHQzFNUNLU6b0Wpd0EdKqGzNeeyF";
 
     // SAML CONFIG VARS
-    private static final String SAML_METADATA_URL_STRING = "";
     private static final String SAML_IMPORT_USERNAME = "Administrator";
+    private static final String SAML_METADATA_URL_STRING = "https://172.20.32.194/websso/SAML2/Metadata/vsphere.local";
 
-
+    // ORG + ROLE VARS
     private static final int ORG_TASK_TIMEOUT_MILLIS = 10_000;
     private static final String SYSTEM_ORG_ID = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9";
     private static final String EXAMPLE_ORG_NAME = "exampleOrg";
     private static final String EXAMPLE_ORG_DESC = "An example organization.";
     private static final String EXAMPLE_ORG_DISPLAY_NAME = "EXAMPLE_ORG";
     private static final String ORG_ADMIN_ROLE_NAME = "Organization Administrator";
+
+    // APIS + SECURITY CONTEXT
     private static VcdClientImpl vcdClient;
     private static OpenApiClient openApiClient;
     private static OrgApi orgsApi = null;
