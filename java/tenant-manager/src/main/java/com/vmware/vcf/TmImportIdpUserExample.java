@@ -8,6 +8,8 @@
 package com.vmware.vcf;
 
 import java.io.BufferedReader;
+import java.io.File;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.URI;
@@ -15,7 +17,9 @@ import java.net.URL;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
+import java.util.Calendar;
 import java.util.Collections;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -26,6 +30,8 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.ws.rs.BadRequestException;
 import javax.xml.bind.JAXBElement;
+import javax.xml.datatype.DatatypeConfigurationException;
+import javax.xml.datatype.DatatypeFactory;
 
 import com.vmware.cxfrestclient.CxfClientSecurityContext;
 import com.vmware.vcfa.util.CertificateUtil;
@@ -39,6 +45,8 @@ import com.vmware.vcloud.api.rest.constants.RestAdminConstants;
 import com.vmware.vcloud.api.rest.schema_v1_5.AdminOrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.CustomOrgLdapSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.LinkType;
+import com.vmware.vcloud.api.rest.schema_v1_5.OAuthKeyConfigurationType;
+import com.vmware.vcloud.api.rest.schema_v1_5.OAuthKeyConfigurationsListType;
 import com.vmware.vcloud.api.rest.schema_v1_5.ObjectFactory;
 import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderConfigurationType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderInfoType;
@@ -53,12 +61,16 @@ import com.vmware.vcloud.api.rest.schema_v1_5.ReferenceType;
 import com.vmware.vcloud.api.rest.schema_v1_5.TaskType;
 import com.vmware.vcloud.rest.openapi.api.OrgApi;
 import com.vmware.vcloud.rest.openapi.api.RolesApi;
+import com.vmware.vcloud.rest.openapi.api.TrustedCertificatesApi;
 import com.vmware.vcloud.rest.openapi.api.UserApi;
 import com.vmware.vcloud.rest.openapi.model.EntityReference;
 import com.vmware.vcloud.rest.openapi.model.Org;
 import com.vmware.vcloud.rest.openapi.model.Role;
 import com.vmware.vcloud.rest.openapi.model.Roles;
+import com.vmware.vcloud.rest.openapi.model.TrustedCertificate;
 import com.vmware.vcloud.rest.openapi.model.VcdUser;
+
+import org.apache.commons.io.FileUtils;
 
 /**
  * Tenant Manager IDP user import example that details how to import users from LDAP, OIDC, and SAML.
@@ -67,7 +79,8 @@ public class TmImportIdpUserExample {
 
     // LDAP CONFIG VARS
     public static final String LDAP_SERVER_BASE_DN = "dc=vsphere,dc=local";
-    private static final URI LDAP_SERVER_URI = URI.create("lvn-epc-dev-181.lvn.broadcom.net");
+    private static final String LDAP_SERVER_HOST = "lvn-epc-dev-181.lvn.broadcom.net";
+    private static final int LDAP_SERVER_PORT = 389;
     private static final String LDAP_SERVER_USER_DN = "cn=Administrator,cn=Users,dc=vsphere,dc=local";
     private static final String LDAP_SERVER_PASSWORD = "Welcome@123";
     private static final String LDAP_TYPE_SIMPLE = "SIMPLE";
@@ -93,11 +106,13 @@ public class TmImportIdpUserExample {
     private static final String ORG_ADMIN_ROLE_NAME = "Organization Administrator";
 
     // APIS + SECURITY CONTEXT
+    private static KeyStore truststore;
     private static VcdClientImpl vcdClient;
     private static OpenApiClient openApiClient;
     private static OrgApi orgsApi = null;
     private static RolesApi rolesApi = null;
     private static UserApi userApi = null;
+    private static TrustedCertificatesApi trustedCirtificateApi = null;
     private static CxfClientSecurityContext securityContext;
 
     public static void main(String[] args) throws Exception {
@@ -120,17 +135,16 @@ public class TmImportIdpUserExample {
          * This example will configure all three IDPs to demonstrate user import from each.
          * Implement the methods below as needed.
          */
-        configureLdapInOrg(adminOrg);  // See "LDAP CONFIG VARS" [Line 50] for LDAP configuration values.
-        configureOidcInOrg(adminOrg);  // See "OIDC CONFIG VARS" [Line 70] for OIDC configuration values.
+        // configureLdapInOrg(adminOrg);  // See "LDAP CONFIG VARS" [Line 50] for LDAP configuration values.
+        // configureOidcInOrg(adminOrg);  // See "OIDC CONFIG VARS" [Line 70] for OIDC configuration values.
         configureSamlInOrg(adminOrg);  // See "SAML CONFIG VARS" [Line 76] for SAML configuration values.
 
-        final VcdUser ldapImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "LDAP");
-
-        final VcdUser oidcImportedUser = importIdpUser(OIDC_IMPORT_USERNAME, orgAdminRole, "OIDC");
+        // final VcdUser ldapImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "LDAP");
+        // final VcdUser oidcImportedUser = importIdpUser(OIDC_IMPORT_USERNAME, orgAdminRole, "OAUTH");
         final VcdUser samlImportedUser = importIdpUser(SAML_IMPORT_USERNAME, orgAdminRole, "SAML");
 
-        System.out.printf("Imported LDAP user %s in org %s: %s%n", ldapImportedUser.getUsername(), createdOrg.getName(), ldapImportedUser);
-        System.out.printf("Imported OIDC user %s in org %s: %s%n", oidcImportedUser.getUsername(), createdOrg.getName(), oidcImportedUser);
+        // System.out.printf("Imported LDAP user %s in org %s: %s%n", ldapImportedUser.getUsername(), createdOrg.getName(), ldapImportedUser);
+        // System.out.printf("Imported OIDC user %s in org %s: %s%n", oidcImportedUser.getUsername(), createdOrg.getName(), oidcImportedUser);
         System.out.printf("Imported SAML user %s in org %s: %s%n", samlImportedUser.getUsername(), createdOrg.getName(), samlImportedUser);
 
         // Reset tenant context to the System org.
@@ -140,18 +154,18 @@ public class TmImportIdpUserExample {
         final Org foundOrg = orgsApi.getOrg(createdOrg.getId());
         System.out.println("Found org: " + foundOrg);
 
-        final VcdUser foundLdapUser = userApi.getUser(ldapImportedUser.getId());
-        System.out.println("Found LDAP user: " + foundLdapUser);
-        final VcdUser foundOidcUser = userApi.getUser(oidcImportedUser.getId());
-        System.out.println("Found OIDC user: " + foundOidcUser);
+        // final VcdUser foundLdapUser = userApi.getUser(ldapImportedUser.getId());
+        // System.out.println("Found LDAP user: " + foundLdapUser);
+        // final VcdUser foundOidcUser = userApi.getUser(oidcImportedUser.getId());
+        // System.out.println("Found OIDC user: " + foundOidcUser);
         final VcdUser foundSamlUser = userApi.getUser(samlImportedUser.getId());
         System.out.println("Found SAML user: " + foundSamlUser);
     }
 
     // SETUP
     // --------------------------------------------------
-    private static void setup() throws Exception{
-        final KeyStore truststore = getKeyStore();
+    private static void setup() throws Exception {
+        truststore = getKeyStore();
         securityContext = CxfClientSecurityContext.getCxfClientSecurityContext(null, null, truststore, null, false);
 
         System.out.println("Using rest-api-client-1.0.0...");
@@ -160,6 +174,7 @@ public class TmImportIdpUserExample {
         orgsApi = openApiClient.createProxy(OrgApi.class);
         rolesApi = openApiClient.createProxy(RolesApi.class);
         userApi = openApiClient.createProxy(UserApi.class);
+        trustedCirtificateApi = openApiClient.createProxy(TrustedCertificatesApi.class);
     }
 
     /*
@@ -269,7 +284,7 @@ public class TmImportIdpUserExample {
 
     public static Role getRoleWithName(String roleName) {
         final String roleNameFilter = "name==" + roleName;
-        final Roles foundRoles = rolesApi.queryTenantRoles(1, 1, roleNameFilter,null, null);
+        final Roles foundRoles = rolesApi.queryTenantRoles(1, 1, roleNameFilter, null, null);
         if (foundRoles.getResultTotal() == 0) {
             throw new IllegalStateException("Unable to fetch role " + roleName);
         }
@@ -286,8 +301,8 @@ public class TmImportIdpUserExample {
     public static void configureLdapInOrg(AdminOrgType adminOrg) {
         // Set connection variables for LDAP server
         CustomOrgLdapSettingsType customOrgLdapSettings = vcdClient.getVCloudObjectFactory().createCustomOrgLdapSettingsType();
-        customOrgLdapSettings.setHostName(LDAP_SERVER_URI.getHost());
-        customOrgLdapSettings.setPort(LDAP_SERVER_URI.getPort());
+        customOrgLdapSettings.setHostName(LDAP_SERVER_HOST);
+        customOrgLdapSettings.setPort(LDAP_SERVER_PORT);
         customOrgLdapSettings.setSearchBase(LDAP_SERVER_BASE_DN);
         customOrgLdapSettings.setConnectorType(ACTIVE_DIRECTORY_CONNECTOR_TYPE);
         customOrgLdapSettings.setIsSsl(false);
@@ -356,6 +371,9 @@ public class TmImportIdpUserExample {
         final LinkType providerConfigLink =
                 VcdUtils.findLink(oAuthSettingsType.getLink(), RestAdminConstants.MediaType.OPENID_PROVIDER_CONFIG);
 
+        // Trust the IDP certificate.
+        trustOidcCirtificate();
+
         // Configure OpenID Provider configuration using a well-known configuration endpoint.
         final OpenIdProviderInfoType providerInfo = new OpenIdProviderInfoType();
         providerInfo.setOpenIdProviderConfigurationEndpoint(OIDC_PROVIDER_CONFIG_ENDPOINT.toString());
@@ -419,8 +437,8 @@ public class TmImportIdpUserExample {
     }
 
     private static void updateOrgFederationSettings(final String ipSamlMetadata,
-                                             final boolean enableFederation,
-                                             final AdminOrgType adminOrg) {
+                                                    final boolean enableFederation,
+                                                    final AdminOrgType adminOrg) {
         final OrgFederationSettingsType existingOrgFederationSettings =
                 adminOrg.getSettings().getOrgFederationSettings();
 
@@ -454,13 +472,13 @@ public class TmImportIdpUserExample {
      * --------------------------------------------------------------------------------------------------------
      */
     private static String downloadMetadata(final URL samlMetadataUri) throws Exception {
-        final HttpsURLConnection connection = (HttpsURLConnection)samlMetadataUri.openConnection();
+        final HttpsURLConnection connection = (HttpsURLConnection) samlMetadataUri.openConnection();
         connection.setHostnameVerifier((arg0, arg1) -> true);
         connection.setSSLSocketFactory(getPermissiveSSLSocketFactory());
         connection.connect();
         final BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
         final StringWriter sw = new StringWriter();
-        for ( ; ; ) {
+        for (; ; ) {
             final int character = reader.read();
             if (character == -1) {
                 break;
@@ -478,7 +496,7 @@ public class TmImportIdpUserExample {
     private static SSLSocketFactory getPermissiveSSLSocketFactory() throws Exception {
         final SSLContext permissiveContext = SSLContext.getInstance("TLS");
         permissiveContext.init(null,
-                new TrustManager[] { new X509TrustManager() {
+                new TrustManager[]{new X509TrustManager() {
                     @Override
                     public void checkClientTrusted(X509Certificate[] arg0, String arg1) {
                         // Do nothing
@@ -503,4 +521,37 @@ public class TmImportIdpUserExample {
      * UNSURE IF DOWNLOADING THE METADATA IS STRICTLY NECESSARY FOR THE BASE EXAMPLE.
      * PERHAPS THE EXAMPLE SHOULD ASSUME THE USER HAS THEIR SAML METADATA XML LOCALLY DOWNLOADED.
      */
+
+    private static void trustOidcCirtificate() {
+        final TrustedCertificate trustedCertificate = new TrustedCertificate();
+        trustedCertificate.alias("ip-205.net-101.vm.sof-mbu.broadcom.net_2025-06-04t01:00:18.777z");
+        trustedCertificate.id("urn:vcloud:trustedCertificate:874ff7bd-882e-4528-b910-573e82271dea");
+        trustedCertificate.certificate("-----BEGIN CERTIFICATE-----\n" +
+                "MIIEMzCCAxugAwIBAgIFFyZIlpcwDQYJKoZIhvcNAQELBQAwgawxCzAJBgNVBAYT\n" +
+                "AlVTMRMwEQYDVQQIDApjYWxpZm9ybmlhMRIwEAYDVQQHDAlQYWxvIEFsdG8xDzAN\n" +
+                "BgNVBAoMBlZNd2FyZTEaMBgGA1UECwwRSG9yaXpvbi1Xb3Jrc3BhY2UxJDAiBgNV\n" +
+                "BAMMG0ludGVybmFsIFJvb3QgQ0EgMTcyNjQ4OTY5NjEhMB8GCSqGSIb3DQEJARYS\n" +
+                "dW5rbm93bkB2bXdhcmUuY29tMCAXDTIzMDkxNzEyMjgxN1oYDzIwNTIwMjAxMTIy\n" +
+                "ODE3WjCBtzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCmNhbGlmb3JuaWExEjAQBgNV\n" +
+                "BAcMCVBhbG8gQWx0bzEPMA0GA1UECgwGVk13YXJlMRowGAYDVQQLDBFIb3Jpem9u\n" +
+                "LVdvcmtzcGFjZTEvMC0GA1UEAwwmaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
+                "cm9hZGNvbS5uZXQxITAfBgkqhkiG9w0BCQEWEnVua25vd25Adm13YXJlLmNvbTCC\n" +
+                "ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAO570V0+vpQ7996MzerBa3Nm\n" +
+                "EvpEbAFPd+t8jRXMPxqEzfi7I7FMGt68TXoG6wR6Z+cn5dmYWcoXxUAESOmQuBbT\n" +
+                "XtYHZ1rMbeN2M1OGtgyC4AhadA+14vJ6vIEF+0oZQOoztxo/qMuhaI1m65nIHGrx\n" +
+                "M9DnEYQCJTq8cMD/6/cI7H6BLEjmyxhh/4Gln6JAbn5kMC+hO/qquwzONMtSn3FR\n" +
+                "GAeIO68WXjeJQJSiFaBsOmBNgZAEgqCUg5J3CHlgFNGRTgoPGbyokHE3r5mZHCWs\n" +
+                "BsTehwPGdimcKUvhbWI2XLl77IDRN6fGrmgvxKpTEQv/L0pjATF+xl8QkSStF7cC\n" +
+                "AwEAAaNNMEswMQYDVR0RBCowKIImaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
+                "cm9hZGNvbS5uZXQwCQYDVR0TBAIwADALBgNVHQ8EBAMCBeAwDQYJKoZIhvcNAQEL\n" +
+                "BQADggEBANS05JiP7Gi/ZQb5r4gk3CX11l/BdrWuNqSO9x34GFxvnh+aWsvySFJI\n" +
+                "RkxSfZEzVStRkqDmtt7xZpB+ihX6cGWqAs38Rd9nHDOVfY1ZKuvN+shBTzoroX4h\n" +
+                "DrcD9rA08A4s7zjfnMQBK7lGbYkWP35/3eU7mGR7au4c/2PfZpE/3dVZB5DQDJud\n" +
+                "nybNNoRVj7MTEGWG043QmeYoa5X7+YdlbIsxFQKQZesY01gXyTeS72UAa1lat8ME\n" +
+                "xM+u879t1vTKcKxpFdi4TLeedV7G8le3ceHQMCO2StpsBQ81v4xqf522iMNSKpID\n" +
+                "WOC6YIvbIU77b7/wyLk0cAbA5Ikxhn4=\n" +
+                "-----END CERTIFICATE-----");
+        trustedCirtificateApi.trustCertificate(trustedCertificate);
+    }
+
 }
