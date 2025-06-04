@@ -7,28 +7,15 @@
  */
 package com.vmware.vcf;
 
-import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
-import java.io.InputStreamReader;
-import java.io.StringWriter;
 import java.net.URI;
-import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.security.KeyStore;
-import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 
-import javax.net.ssl.HttpsURLConnection;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLSocketFactory;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.X509TrustManager;
-import javax.ws.rs.BadRequestException;
 import javax.xml.bind.JAXBElement;
 
 import com.vmware.cxfrestclient.CxfClientSecurityContext;
@@ -54,7 +41,6 @@ import com.vmware.vcloud.api.rest.schema_v1_5.OrgOAuthSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.ReferenceType;
-import com.vmware.vcloud.api.rest.schema_v1_5.TaskType;
 import com.vmware.vcloud.rest.openapi.api.OrgApi;
 import com.vmware.vcloud.rest.openapi.api.RolesApi;
 import com.vmware.vcloud.rest.openapi.api.TrustedCertificatesApi;
@@ -68,92 +54,51 @@ import com.vmware.vcloud.rest.openapi.model.VcdUser;
 
 /**
  * Tenant Manager IDP user import example that details how to import users from LDAP, OIDC, and SAML.
+ * --------------------------------------------------
+ * This example contains the necessary code for configuring LDAP, OIDC, and SAML, as well as importing
+ * a user from each. This can be extended as needed for specific use-cases.
+ * The sample code assumes an org has already been created.
+ * The SAML case specifically requires the SAML IDP to be set up to the point that a metadata XML file
+ * can be configured inside VCFA.
+ * The process for trusting IDP certificates is also detailed in the event that certs are not
+ * well-signed or have yet to be trusted in VCFA.
  */
 public class TmImportIdpUserExample {
 
     // LDAP CONFIG VARS
     public static final String LDAP_SERVER_BASE_DN = "dc=vsphere,dc=local";
-    private static final String LDAP_SERVER_HOST = "lvn-epc-dev-181.lvn.broadcom.net";
+    private static final String LDAP_SERVER_HOST = "examplLdapServer.ldap.com";
     private static final int LDAP_SERVER_PORT = 389;
     private static final String LDAP_SERVER_USER_DN = "cn=Administrator,cn=Users,dc=vsphere,dc=local";
-    private static final String LDAP_SERVER_PASSWORD = "Welcome@123";
+    private static final String LDAP_SERVER_PASSWORD = "examplePassword";
     private static final String LDAP_TYPE_SIMPLE = "SIMPLE";
     private static final String ACTIVE_DIRECTORY_CONNECTOR_TYPE = "ACTIVE_DIRECTORY";
-    private static final String LDAP_IMPORT_USERNAME = "testUser";
+    private static final String LDAP_IMPORT_USERNAME = "exampleLdapUser";
 
     // Use the below two vars if the IDP cert is not well-signed or already trusted in VCFA.
     private static final String LDAP_CERT_ALIAS = "ip-205.net-101.vm.sof-mbu.broadcom.net_2025-06-04t01:00:18.777z";
     private static final String LDAP_CERT_VALUE =
             "-----BEGIN CERTIFICATE-----\n" +
-                    "MIIEMzCCAxugAwIBAgIFFyZIlpcwDQYJKoZIhvcNAQELBQAwgawxCzAJBgNVBAYT\n" +
-                    "AlVTMRMwEQYDVQQIDApjYWxpZm9ybmlhMRIwEAYDVQQHDAlQYWxvIEFsdG8xDzAN\n" +
-                    "BgNVBAoMBlZNd2FyZTEaMBgGA1UECwwRSG9yaXpvbi1Xb3Jrc3BhY2UxJDAiBgNV\n" +
-                    "BAMMG0ludGVybmFsIFJvb3QgQ0EgMTcyNjQ4OTY5NjEhMB8GCSqGSIb3DQEJARYS\n" +
-                    "dW5rbm93bkB2bXdhcmUuY29tMCAXDTIzMDkxNzEyMjgxN1oYDzIwNTIwMjAxMTIy\n" +
-                    "ODE3WjCBtzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCmNhbGlmb3JuaWExEjAQBgNV\n" +
-                    "BAcMCVBhbG8gQWx0bzEPMA0GA1UECgwGVk13YXJlMRowGAYDVQQLDBFIb3Jpem9u\n" +
-                    "LVdvcmtzcGFjZTEvMC0GA1UEAwwmaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
-                    "cm9hZGNvbS5uZXQxITAfBgkqhkiG9w0BCQEWEnVua25vd25Adm13YXJlLmNvbTCC\n" +
-                    "ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAO570V0+vpQ7996MzerBa3Nm\n" +
-                    "EvpEbAFPd+t8jRXMPxqEzfi7I7FMGt68TXoG6wR6Z+cn5dmYWcoXxUAESOmQuBbT\n" +
-                    "XtYHZ1rMbeN2M1OGtgyC4AhadA+14vJ6vIEF+0oZQOoztxo/qMuhaI1m65nIHGrx\n" +
-                    "M9DnEYQCJTq8cMD/6/cI7H6BLEjmyxhh/4Gln6JAbn5kMC+hO/qquwzONMtSn3FR\n" +
-                    "GAeIO68WXjeJQJSiFaBsOmBNgZAEgqCUg5J3CHlgFNGRTgoPGbyokHE3r5mZHCWs\n" +
-                    "BsTehwPGdimcKUvhbWI2XLl77IDRN6fGrmgvxKpTEQv/L0pjATF+xl8QkSStF7cC\n" +
-                    "AwEAAaNNMEswMQYDVR0RBCowKIImaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
-                    "cm9hZGNvbS5uZXQwCQYDVR0TBAIwADALBgNVHQ8EBAMCBeAwDQYJKoZIhvcNAQEL\n" +
-                    "BQADggEBANS05JiP7Gi/ZQb5r4gk3CX11l/BdrWuNqSO9x34GFxvnh+aWsvySFJI\n" +
-                    "RkxSfZEzVStRkqDmtt7xZpB+ihX6cGWqAs38Rd9nHDOVfY1ZKuvN+shBTzoroX4h\n" +
-                    "DrcD9rA08A4s7zjfnMQBK7lGbYkWP35/3eU7mGR7au4c/2PfZpE/3dVZB5DQDJud\n" +
-                    "nybNNoRVj7MTEGWG043QmeYoa5X7+YdlbIsxFQKQZesY01gXyTeS72UAa1lat8ME\n" +
-                    "xM+u879t1vTKcKxpFdi4TLeedV7G8le3ceHQMCO2StpsBQ81v4xqf522iMNSKpID\n" +
-                    "WOC6YIvbIU77b7/wyLk0cAbA5Ikxhn4=\n" +
+                    "examplecertexamplecertexamplecertexamplecertexamplecertexamplecert\n" +
                     "-----END CERTIFICATE-----";
 
     // OIDC CONFIG VARS
-    private static final String OIDC_IMPORT_USERNAME = "brianh1_test";
-    private static final URI OIDC_PROVIDER_CONFIG_ENDPOINT = URI.create("https://ip-205.net-101.vm.sof-mbu.broadcom.net/SAAS/auth/.well-known/openid-configuration");
-    private static final String OIDC_CLIENT_ID = "brianh1_oidc_client";
-    private static final String OIDC_CLIENT_SECRET = "w3biMyWpuL01EKV27duWEHQzFNUNLU6b0Wpd0EdKqGzNeeyF";
+    private static final String OIDC_IMPORT_USERNAME = "exampleOidcUser";
+    private static final String OIDC_PROVIDER_CONFIG_ENDPOINT = "https://ip-205.net-101.vm.sof-mbu.broadcom.net/SAAS/auth/.well-known/openid-configuration";
+    private static final String OIDC_CLIENT_ID = "exampleOidcClient";
+    private static final String OIDC_CLIENT_SECRET = "abcdefghijklmnopqrstuvwxyz1234567890";
 
     // Use the below two vars if the IDP cert is not well-signed or already trusted in VCFA.
-    private static final String OIDC_CERT_ALIAS = "ip-205.net-101.vm.sof-mbu.broadcom.net_2025-06-04t01:00:18.777z";
-    // private static final String OIDC_CERT_ALIAS = "oidcexamplealias";
+    private static final String OIDC_CERT_ALIAS = "oidcexamplealias";
     private static final String OIDC_CERT_VALUE =
             "-----BEGIN CERTIFICATE-----\n" +
-                    "MIIEMzCCAxugAwIBAgIFFyZIlpcwDQYJKoZIhvcNAQELBQAwgawxCzAJBgNVBAYT\n" +
-                    "AlVTMRMwEQYDVQQIDApjYWxpZm9ybmlhMRIwEAYDVQQHDAlQYWxvIEFsdG8xDzAN\n" +
-                    "BgNVBAoMBlZNd2FyZTEaMBgGA1UECwwRSG9yaXpvbi1Xb3Jrc3BhY2UxJDAiBgNV\n" +
-                    "BAMMG0ludGVybmFsIFJvb3QgQ0EgMTcyNjQ4OTY5NjEhMB8GCSqGSIb3DQEJARYS\n" +
-                    "dW5rbm93bkB2bXdhcmUuY29tMCAXDTIzMDkxNzEyMjgxN1oYDzIwNTIwMjAxMTIy\n" +
-                    "ODE3WjCBtzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCmNhbGlmb3JuaWExEjAQBgNV\n" +
-                    "BAcMCVBhbG8gQWx0bzEPMA0GA1UECgwGVk13YXJlMRowGAYDVQQLDBFIb3Jpem9u\n" +
-                    "LVdvcmtzcGFjZTEvMC0GA1UEAwwmaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
-                    "cm9hZGNvbS5uZXQxITAfBgkqhkiG9w0BCQEWEnVua25vd25Adm13YXJlLmNvbTCC\n" +
-                    "ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAO570V0+vpQ7996MzerBa3Nm\n" +
-                    "EvpEbAFPd+t8jRXMPxqEzfi7I7FMGt68TXoG6wR6Z+cn5dmYWcoXxUAESOmQuBbT\n" +
-                    "XtYHZ1rMbeN2M1OGtgyC4AhadA+14vJ6vIEF+0oZQOoztxo/qMuhaI1m65nIHGrx\n" +
-                    "M9DnEYQCJTq8cMD/6/cI7H6BLEjmyxhh/4Gln6JAbn5kMC+hO/qquwzONMtSn3FR\n" +
-                    "GAeIO68WXjeJQJSiFaBsOmBNgZAEgqCUg5J3CHlgFNGRTgoPGbyokHE3r5mZHCWs\n" +
-                    "BsTehwPGdimcKUvhbWI2XLl77IDRN6fGrmgvxKpTEQv/L0pjATF+xl8QkSStF7cC\n" +
-                    "AwEAAaNNMEswMQYDVR0RBCowKIImaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
-                    "cm9hZGNvbS5uZXQwCQYDVR0TBAIwADALBgNVHQ8EBAMCBeAwDQYJKoZIhvcNAQEL\n" +
-                    "BQADggEBANS05JiP7Gi/ZQb5r4gk3CX11l/BdrWuNqSO9x34GFxvnh+aWsvySFJI\n" +
-                    "RkxSfZEzVStRkqDmtt7xZpB+ihX6cGWqAs38Rd9nHDOVfY1ZKuvN+shBTzoroX4h\n" +
-                    "DrcD9rA08A4s7zjfnMQBK7lGbYkWP35/3eU7mGR7au4c/2PfZpE/3dVZB5DQDJud\n" +
-                    "nybNNoRVj7MTEGWG043QmeYoa5X7+YdlbIsxFQKQZesY01gXyTeS72UAa1lat8ME\n" +
-                    "xM+u879t1vTKcKxpFdi4TLeedV7G8le3ceHQMCO2StpsBQ81v4xqf522iMNSKpID\n" +
-                    "WOC6YIvbIU77b7/wyLk0cAbA5Ikxhn4=\n" +
+                    "examplecertexamplecertexamplecertexamplecertexamplecertexamplecert\n" +
                     "-----END CERTIFICATE-----";
-    // private static final String OIDC_CERT_VALUE =
-    //         "-----BEGIN CERTIFICATE-----\n" +
-    //                 "examplecertexamplecertexamplecertexamplecertexamplecertexamplecert\n" +
-    //                 "-----END CERTIFICATE-----";
 
     // SAML CONFIG VARS
-    private static final String SAML_IMPORT_USERNAME = "exampleUser";
-    private static final String SAML_CONFIG_ENTITY_ID = "exampleOrg";
-    private static final String SAML_METADATA_XML_PATH = "/Users/brianh1/brianh1_test_saml.xml";
+    private static final String SAML_IMPORT_USERNAME = "exampleSamlUser";
+    private static final String SAML_CONFIG_ENTITY_ID = "exampleEntityId";
+    private static final String SAML_METADATA_XML_PATH = "/path/to/saml_metadata.xml";
     // Use the below two vars if the IDP cert is not well-signed or already trusted in VCFA.
     private static final String SAML_CERT_ALIAS = "samlexamplealias";
     private static final String SAML_CERT_VALUE =
@@ -162,8 +107,7 @@ public class TmImportIdpUserExample {
                     "-----END CERTIFICATE-----";
 
     // ORG + ROLE VARS
-    private static final int ORG_TASK_TIMEOUT_MILLIS = 10_000;
-    private static final String SYSTEM_ORG_ID = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9";
+    private static final String SYSTEM_ORG_ID = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9"; // Do not change
     private static final String EXAMPLE_ORG_URN = "urn:vcloud:org:ba12d5cb-07ae-4050-b462-6fb3e38c8861";
     private static final String ORG_ADMIN_ROLE_NAME = "Organization Administrator";
 
@@ -181,7 +125,10 @@ public class TmImportIdpUserExample {
         // Sets up the keystore, VCD Client, and API Clients
         setup();
 
-        // final Org createdOrg = createOrg(EXAMPLE_ORG_NAME, EXAMPLE_ORG_DESC, EXAMPLE_ORG_DISPLAY_NAME, true);
+        /*
+         * This example assumes you have already created an organization in which the IDPs will be configured.
+         * Please follow the relevant org creation example to create an org and first local user.
+         */
         final Org org = orgsApi.getOrg(EXAMPLE_ORG_URN);
 
         System.out.printf("Retrieved org %s: %s%n", org.getName(), org);
@@ -197,10 +144,12 @@ public class TmImportIdpUserExample {
          * --------------------------
          * This example will configure all three IDPs to demonstrate user import from each.
          * Implement the methods below as needed.
+         *
+         * Specific information is contained in the relevant configuration methods for each IDP type
          */
-        configureLdapInOrg(adminOrg);  // See "LDAP CONFIG VARS" [Line 50] for LDAP configuration values.
-        configureOidcInOrg(adminOrg);  // See "OIDC CONFIG VARS" [Line 70] for OIDC configuration values.
-        configureSamlInOrg(adminOrg);  // See "SAML CONFIG VARS" [Line 76] for SAML configuration values.
+        configureLdapInOrg(adminOrg);  // See "LDAP CONFIG VARS" [Line 68] for LDAP configuration values.
+        configureOidcInOrg(adminOrg);  // See "OIDC CONFIG VARS" [Line 85] for OIDC configuration values.
+        configureSamlInOrg(adminOrg);  // See "SAML CONFIG VARS" [Line 98] for SAML configuration values.
 
         final VcdUser ldapImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "LDAP");
         final VcdUser oidcImportedUser = importIdpUser(OIDC_IMPORT_USERNAME, orgAdminRole, "OAUTH");
@@ -212,10 +161,6 @@ public class TmImportIdpUserExample {
 
         // Reset tenant context to the System org.
         openApiClient.setTenantContextHeader(SYSTEM_ORG_ID);
-
-        // Confirm the new org and user can be fetched
-        final Org foundOrg = orgsApi.getOrg(org.getId());
-        System.out.println("Found org: " + foundOrg);
 
         final VcdUser foundLdapUser = userApi.getUser(ldapImportedUser.getId());
         System.out.println("Found LDAP user: " + foundLdapUser);
@@ -288,34 +233,6 @@ public class TmImportIdpUserExample {
 
     // ORGANIZATIONS
     // --------------------------------------------------
-    public static Org createOrg(final String name, final String description, final String displayName,
-                                final Boolean isEnabled) throws BadRequestException {
-        final Org newOrg = new Org()
-                .name(name)
-                .description(description)
-                .displayName(displayName)
-                .isEnabled(isEnabled);
-        return createOrg(newOrg);
-    }
-
-    private static Org createOrg(final Org newOrg) throws BadRequestException {
-        Org createdOrg = orgsApi.createOrg(newOrg);
-        if (createdOrg == null) {
-            createdOrg = waitForOrgCreateTask();
-        }
-        return createdOrg;
-    }
-
-    private static Org waitForOrgCreateTask() {
-        try {
-            final String updateTaskLink = openApiClient.getLastTaskUri(orgsApi).toString();
-            final TaskType taskType = vcdClient.getTaskMonitor().waitForSuccess(updateTaskLink, ORG_TASK_TIMEOUT_MILLIS);
-            return orgsApi.getOrg(taskType.getOwner().getId());
-        } catch (TimeoutException e) {
-            throw new RuntimeException("Failed to wait for result of org update task.", e);
-        }
-    }
-
     public static AdminOrgType getAdminOrgFromOrgName(String orgName) {
         final List<ReferenceType> orgRefList = vcdClient.getOrganizations();
         for (ReferenceType orgRef : orgRefList) {
@@ -368,7 +285,7 @@ public class TmImportIdpUserExample {
 
     /**
      * Configures the desired LDAP server in VCFA.
-     * See "LDAP Server VARS" [Line 50] for variable definitions.
+     * See "LDAP CONFIG VARS" [Line 68] for variable definitions.
      */
     public static void configureLdapInOrg(AdminOrgType adminOrg) {
         // Trust the IDP certificate. This is only necessary if the
@@ -440,6 +357,10 @@ public class TmImportIdpUserExample {
 
     // OIDC CONFIGURATION
     // --------------------------------------------------
+    /**
+     * Configures the desired OIDC server in VCFA.
+     * See "OIDC CONFIG VARS" [Line 85] for variable definitions.
+     */
     public static void configureOidcInOrg(AdminOrgType adminOrg) {
         // Trust the IDP certificate. This is only necessary if the
         // OIDC instance does not have a well-signed cert.
@@ -453,7 +374,7 @@ public class TmImportIdpUserExample {
 
         // Configure OpenID Provider configuration using a well-known configuration endpoint.
         final OpenIdProviderInfoType providerInfo = new OpenIdProviderInfoType();
-        providerInfo.setOpenIdProviderConfigurationEndpoint(OIDC_PROVIDER_CONFIG_ENDPOINT.toString());
+        providerInfo.setOpenIdProviderConfigurationEndpoint(OIDC_PROVIDER_CONFIG_ENDPOINT);
         final ObjectFactory objectFactory = vcdClient.getVCloudObjectFactory();
         final OpenIdProviderConfigurationType providerConfig = vcdClient.postResource(
                 URI.create(providerConfigLink.getHref()), RestAdminConstants.MediaType.OPENID_PROVIDER_INFO,
@@ -477,6 +398,9 @@ public class TmImportIdpUserExample {
         updateOAuthSettings(adminOrg, orgOAuthSettings);
     }
 
+    /**
+     * Updates VCFA OAuth Settings
+     */
     private static void updateOAuthSettings(AdminOrgType adminOrg, OrgOAuthSettingsType settings) {
         // Retrieve VCFA OAuth settings.
         final JAXBElement<OrgOAuthSettingsType> jabxOrgOAuthSettings =
@@ -497,6 +421,14 @@ public class TmImportIdpUserExample {
 
     // SAML CONFIGURATION
     // --------------------------------------------------
+    /**
+     * Configures the desired SAML server in VCFA.
+     * See "SAML CONFIG VARS" [Line 98] for variable definitions.
+     * --------------------------------------------------
+     * NOTE: Configuring SAML assumes that the IDP has been configured (both in the org and on the IDP itself)
+     * to the point that SAML metadata from the IDP has been successfully stored locally for retrieval.
+     * This must be done before attempting the remaining configuration steps necessary to import a SAML user.
+     */
     public static void configureSamlInOrg(final AdminOrgType adminOrg) throws IOException {
         // Trust the IDP certificate. This is only necessary if the
         // SAML instance does not have a well-signed cert.
@@ -509,6 +441,9 @@ public class TmImportIdpUserExample {
         updateOrgFederationSettings(ipSamlMetadata, true, adminOrg);
     }
 
+    /**
+     * Updates VCFA SAML settings.
+     */
     private static void updateOrgFederationSettings(final String ipSamlMetadata,
                                                     final boolean enableFederation,
                                                     final AdminOrgType adminOrg) {
