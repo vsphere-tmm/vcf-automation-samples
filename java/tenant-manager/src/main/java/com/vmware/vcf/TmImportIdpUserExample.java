@@ -14,12 +14,12 @@ import java.io.InputStreamReader;
 import java.io.StringWriter;
 import java.net.URI;
 import java.net.URL;
+import java.nio.file.Files;
+import java.nio.file.Paths;
 import java.security.KeyStore;
 import java.security.SecureRandom;
 import java.security.cert.X509Certificate;
-import java.util.Calendar;
 import java.util.Collections;
-import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 
@@ -30,8 +30,6 @@ import javax.net.ssl.TrustManager;
 import javax.net.ssl.X509TrustManager;
 import javax.ws.rs.BadRequestException;
 import javax.xml.bind.JAXBElement;
-import javax.xml.datatype.DatatypeConfigurationException;
-import javax.xml.datatype.DatatypeFactory;
 
 import com.vmware.cxfrestclient.CxfClientSecurityContext;
 import com.vmware.vcfa.util.CertificateUtil;
@@ -45,8 +43,6 @@ import com.vmware.vcloud.api.rest.constants.RestAdminConstants;
 import com.vmware.vcloud.api.rest.schema_v1_5.AdminOrgType;
 import com.vmware.vcloud.api.rest.schema_v1_5.CustomOrgLdapSettingsType;
 import com.vmware.vcloud.api.rest.schema_v1_5.LinkType;
-import com.vmware.vcloud.api.rest.schema_v1_5.OAuthKeyConfigurationType;
-import com.vmware.vcloud.api.rest.schema_v1_5.OAuthKeyConfigurationsListType;
 import com.vmware.vcloud.api.rest.schema_v1_5.ObjectFactory;
 import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderConfigurationType;
 import com.vmware.vcloud.api.rest.schema_v1_5.OpenIdProviderInfoType;
@@ -70,8 +66,6 @@ import com.vmware.vcloud.rest.openapi.model.Roles;
 import com.vmware.vcloud.rest.openapi.model.TrustedCertificate;
 import com.vmware.vcloud.rest.openapi.model.VcdUser;
 
-import org.apache.commons.io.FileUtils;
-
 /**
  * Tenant Manager IDP user import example that details how to import users from LDAP, OIDC, and SAML.
  */
@@ -85,7 +79,36 @@ public class TmImportIdpUserExample {
     private static final String LDAP_SERVER_PASSWORD = "Welcome@123";
     private static final String LDAP_TYPE_SIMPLE = "SIMPLE";
     private static final String ACTIVE_DIRECTORY_CONNECTOR_TYPE = "ACTIVE_DIRECTORY";
-    private static final String LDAP_IMPORT_USERNAME = "Administrator";
+    private static final String LDAP_IMPORT_USERNAME = "testUser";
+
+    // Use the below two vars if the IDP cert is not well-signed or already trusted in VCFA.
+    private static final String LDAP_CERT_ALIAS = "ip-205.net-101.vm.sof-mbu.broadcom.net_2025-06-04t01:00:18.777z";
+    private static final String LDAP_CERT_VALUE =
+            "-----BEGIN CERTIFICATE-----\n" +
+                    "MIIEMzCCAxugAwIBAgIFFyZIlpcwDQYJKoZIhvcNAQELBQAwgawxCzAJBgNVBAYT\n" +
+                    "AlVTMRMwEQYDVQQIDApjYWxpZm9ybmlhMRIwEAYDVQQHDAlQYWxvIEFsdG8xDzAN\n" +
+                    "BgNVBAoMBlZNd2FyZTEaMBgGA1UECwwRSG9yaXpvbi1Xb3Jrc3BhY2UxJDAiBgNV\n" +
+                    "BAMMG0ludGVybmFsIFJvb3QgQ0EgMTcyNjQ4OTY5NjEhMB8GCSqGSIb3DQEJARYS\n" +
+                    "dW5rbm93bkB2bXdhcmUuY29tMCAXDTIzMDkxNzEyMjgxN1oYDzIwNTIwMjAxMTIy\n" +
+                    "ODE3WjCBtzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCmNhbGlmb3JuaWExEjAQBgNV\n" +
+                    "BAcMCVBhbG8gQWx0bzEPMA0GA1UECgwGVk13YXJlMRowGAYDVQQLDBFIb3Jpem9u\n" +
+                    "LVdvcmtzcGFjZTEvMC0GA1UEAwwmaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
+                    "cm9hZGNvbS5uZXQxITAfBgkqhkiG9w0BCQEWEnVua25vd25Adm13YXJlLmNvbTCC\n" +
+                    "ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAO570V0+vpQ7996MzerBa3Nm\n" +
+                    "EvpEbAFPd+t8jRXMPxqEzfi7I7FMGt68TXoG6wR6Z+cn5dmYWcoXxUAESOmQuBbT\n" +
+                    "XtYHZ1rMbeN2M1OGtgyC4AhadA+14vJ6vIEF+0oZQOoztxo/qMuhaI1m65nIHGrx\n" +
+                    "M9DnEYQCJTq8cMD/6/cI7H6BLEjmyxhh/4Gln6JAbn5kMC+hO/qquwzONMtSn3FR\n" +
+                    "GAeIO68WXjeJQJSiFaBsOmBNgZAEgqCUg5J3CHlgFNGRTgoPGbyokHE3r5mZHCWs\n" +
+                    "BsTehwPGdimcKUvhbWI2XLl77IDRN6fGrmgvxKpTEQv/L0pjATF+xl8QkSStF7cC\n" +
+                    "AwEAAaNNMEswMQYDVR0RBCowKIImaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
+                    "cm9hZGNvbS5uZXQwCQYDVR0TBAIwADALBgNVHQ8EBAMCBeAwDQYJKoZIhvcNAQEL\n" +
+                    "BQADggEBANS05JiP7Gi/ZQb5r4gk3CX11l/BdrWuNqSO9x34GFxvnh+aWsvySFJI\n" +
+                    "RkxSfZEzVStRkqDmtt7xZpB+ihX6cGWqAs38Rd9nHDOVfY1ZKuvN+shBTzoroX4h\n" +
+                    "DrcD9rA08A4s7zjfnMQBK7lGbYkWP35/3eU7mGR7au4c/2PfZpE/3dVZB5DQDJud\n" +
+                    "nybNNoRVj7MTEGWG043QmeYoa5X7+YdlbIsxFQKQZesY01gXyTeS72UAa1lat8ME\n" +
+                    "xM+u879t1vTKcKxpFdi4TLeedV7G8le3ceHQMCO2StpsBQ81v4xqf522iMNSKpID\n" +
+                    "WOC6YIvbIU77b7/wyLk0cAbA5Ikxhn4=\n" +
+                    "-----END CERTIFICATE-----";
 
     // OIDC CONFIG VARS
     private static final String OIDC_IMPORT_USERNAME = "brianh1_test";
@@ -93,16 +116,55 @@ public class TmImportIdpUserExample {
     private static final String OIDC_CLIENT_ID = "brianh1_oidc_client";
     private static final String OIDC_CLIENT_SECRET = "w3biMyWpuL01EKV27duWEHQzFNUNLU6b0Wpd0EdKqGzNeeyF";
 
+    // Use the below two vars if the IDP cert is not well-signed or already trusted in VCFA.
+    private static final String OIDC_CERT_ALIAS = "ip-205.net-101.vm.sof-mbu.broadcom.net_2025-06-04t01:00:18.777z";
+    // private static final String OIDC_CERT_ALIAS = "oidcexamplealias";
+    private static final String OIDC_CERT_VALUE =
+            "-----BEGIN CERTIFICATE-----\n" +
+                    "MIIEMzCCAxugAwIBAgIFFyZIlpcwDQYJKoZIhvcNAQELBQAwgawxCzAJBgNVBAYT\n" +
+                    "AlVTMRMwEQYDVQQIDApjYWxpZm9ybmlhMRIwEAYDVQQHDAlQYWxvIEFsdG8xDzAN\n" +
+                    "BgNVBAoMBlZNd2FyZTEaMBgGA1UECwwRSG9yaXpvbi1Xb3Jrc3BhY2UxJDAiBgNV\n" +
+                    "BAMMG0ludGVybmFsIFJvb3QgQ0EgMTcyNjQ4OTY5NjEhMB8GCSqGSIb3DQEJARYS\n" +
+                    "dW5rbm93bkB2bXdhcmUuY29tMCAXDTIzMDkxNzEyMjgxN1oYDzIwNTIwMjAxMTIy\n" +
+                    "ODE3WjCBtzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCmNhbGlmb3JuaWExEjAQBgNV\n" +
+                    "BAcMCVBhbG8gQWx0bzEPMA0GA1UECgwGVk13YXJlMRowGAYDVQQLDBFIb3Jpem9u\n" +
+                    "LVdvcmtzcGFjZTEvMC0GA1UEAwwmaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
+                    "cm9hZGNvbS5uZXQxITAfBgkqhkiG9w0BCQEWEnVua25vd25Adm13YXJlLmNvbTCC\n" +
+                    "ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAO570V0+vpQ7996MzerBa3Nm\n" +
+                    "EvpEbAFPd+t8jRXMPxqEzfi7I7FMGt68TXoG6wR6Z+cn5dmYWcoXxUAESOmQuBbT\n" +
+                    "XtYHZ1rMbeN2M1OGtgyC4AhadA+14vJ6vIEF+0oZQOoztxo/qMuhaI1m65nIHGrx\n" +
+                    "M9DnEYQCJTq8cMD/6/cI7H6BLEjmyxhh/4Gln6JAbn5kMC+hO/qquwzONMtSn3FR\n" +
+                    "GAeIO68WXjeJQJSiFaBsOmBNgZAEgqCUg5J3CHlgFNGRTgoPGbyokHE3r5mZHCWs\n" +
+                    "BsTehwPGdimcKUvhbWI2XLl77IDRN6fGrmgvxKpTEQv/L0pjATF+xl8QkSStF7cC\n" +
+                    "AwEAAaNNMEswMQYDVR0RBCowKIImaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
+                    "cm9hZGNvbS5uZXQwCQYDVR0TBAIwADALBgNVHQ8EBAMCBeAwDQYJKoZIhvcNAQEL\n" +
+                    "BQADggEBANS05JiP7Gi/ZQb5r4gk3CX11l/BdrWuNqSO9x34GFxvnh+aWsvySFJI\n" +
+                    "RkxSfZEzVStRkqDmtt7xZpB+ihX6cGWqAs38Rd9nHDOVfY1ZKuvN+shBTzoroX4h\n" +
+                    "DrcD9rA08A4s7zjfnMQBK7lGbYkWP35/3eU7mGR7au4c/2PfZpE/3dVZB5DQDJud\n" +
+                    "nybNNoRVj7MTEGWG043QmeYoa5X7+YdlbIsxFQKQZesY01gXyTeS72UAa1lat8ME\n" +
+                    "xM+u879t1vTKcKxpFdi4TLeedV7G8le3ceHQMCO2StpsBQ81v4xqf522iMNSKpID\n" +
+                    "WOC6YIvbIU77b7/wyLk0cAbA5Ikxhn4=\n" +
+                    "-----END CERTIFICATE-----";
+    // private static final String OIDC_CERT_VALUE =
+    //         "-----BEGIN CERTIFICATE-----\n" +
+    //                 "examplecertexamplecertexamplecertexamplecertexamplecertexamplecert\n" +
+    //                 "-----END CERTIFICATE-----";
+
     // SAML CONFIG VARS
-    private static final String SAML_IMPORT_USERNAME = "Administrator";
-    private static final String SAML_METADATA_URL_STRING = "https://172.20.32.194/websso/SAML2/Metadata/vsphere.local";
+    private static final String SAML_IMPORT_USERNAME = "exampleUser";
+    private static final String SAML_CONFIG_ENTITY_ID = "exampleOrg";
+    private static final String SAML_METADATA_XML_PATH = "/Users/brianh1/brianh1_test_saml.xml";
+    // Use the below two vars if the IDP cert is not well-signed or already trusted in VCFA.
+    private static final String SAML_CERT_ALIAS = "samlexamplealias";
+    private static final String SAML_CERT_VALUE =
+            "-----BEGIN CERTIFICATE-----\n" +
+                    "examplecertexamplecertexamplecertexamplecertexamplecertexamplecert\n" +
+                    "-----END CERTIFICATE-----";
 
     // ORG + ROLE VARS
     private static final int ORG_TASK_TIMEOUT_MILLIS = 10_000;
     private static final String SYSTEM_ORG_ID = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9";
-    private static final String EXAMPLE_ORG_NAME = "exampleOrg";
-    private static final String EXAMPLE_ORG_DESC = "An example organization.";
-    private static final String EXAMPLE_ORG_DISPLAY_NAME = "EXAMPLE_ORG";
+    private static final String EXAMPLE_ORG_URN = "urn:vcloud:org:ba12d5cb-07ae-4050-b462-6fb3e38c8861";
     private static final String ORG_ADMIN_ROLE_NAME = "Organization Administrator";
 
     // APIS + SECURITY CONTEXT
@@ -119,45 +181,46 @@ public class TmImportIdpUserExample {
         // Sets up the keystore, VCD Client, and API Clients
         setup();
 
-        final Org createdOrg = createOrg(EXAMPLE_ORG_NAME, EXAMPLE_ORG_DESC, EXAMPLE_ORG_DISPLAY_NAME, true);
+        // final Org createdOrg = createOrg(EXAMPLE_ORG_NAME, EXAMPLE_ORG_DESC, EXAMPLE_ORG_DISPLAY_NAME, true);
+        final Org org = orgsApi.getOrg(EXAMPLE_ORG_URN);
 
-        System.out.printf("Created org %s: %s%n", createdOrg.getName(), createdOrg);
+        System.out.printf("Retrieved org %s: %s%n", org.getName(), org);
 
         // Set the openAPI client tenant context to the created org ID to perform actions in that org.
-        openApiClient.setTenantContextHeader(createdOrg.getId());
+        openApiClient.setTenantContextHeader(org.getId());
         final Role orgAdminRole = getRoleWithName(ORG_ADMIN_ROLE_NAME);
 
         // A separate org type is used to configure IDPs.
-        final AdminOrgType adminOrg = getAdminOrgFromOrgName(createdOrg.getName());
+        final AdminOrgType adminOrg = getAdminOrgFromOrgName(org.getName());
         /*
          * Configure the IDP in VCFA.
          * --------------------------
          * This example will configure all three IDPs to demonstrate user import from each.
          * Implement the methods below as needed.
          */
-        // configureLdapInOrg(adminOrg);  // See "LDAP CONFIG VARS" [Line 50] for LDAP configuration values.
-        // configureOidcInOrg(adminOrg);  // See "OIDC CONFIG VARS" [Line 70] for OIDC configuration values.
+        configureLdapInOrg(adminOrg);  // See "LDAP CONFIG VARS" [Line 50] for LDAP configuration values.
+        configureOidcInOrg(adminOrg);  // See "OIDC CONFIG VARS" [Line 70] for OIDC configuration values.
         configureSamlInOrg(adminOrg);  // See "SAML CONFIG VARS" [Line 76] for SAML configuration values.
 
-        // final VcdUser ldapImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "LDAP");
-        // final VcdUser oidcImportedUser = importIdpUser(OIDC_IMPORT_USERNAME, orgAdminRole, "OAUTH");
+        final VcdUser ldapImportedUser = importIdpUser(LDAP_IMPORT_USERNAME, orgAdminRole, "LDAP");
+        final VcdUser oidcImportedUser = importIdpUser(OIDC_IMPORT_USERNAME, orgAdminRole, "OAUTH");
         final VcdUser samlImportedUser = importIdpUser(SAML_IMPORT_USERNAME, orgAdminRole, "SAML");
 
-        // System.out.printf("Imported LDAP user %s in org %s: %s%n", ldapImportedUser.getUsername(), createdOrg.getName(), ldapImportedUser);
-        // System.out.printf("Imported OIDC user %s in org %s: %s%n", oidcImportedUser.getUsername(), createdOrg.getName(), oidcImportedUser);
-        System.out.printf("Imported SAML user %s in org %s: %s%n", samlImportedUser.getUsername(), createdOrg.getName(), samlImportedUser);
+        System.out.printf("Imported LDAP user %s in org %s: %s%n", ldapImportedUser.getUsername(), org.getName(), ldapImportedUser);
+        System.out.printf("Imported OIDC user %s in org %s: %s%n", oidcImportedUser.getUsername(), org.getName(), oidcImportedUser);
+        System.out.printf("Imported SAML user %s in org %s: %s%n", samlImportedUser.getUsername(), org.getName(), samlImportedUser);
 
         // Reset tenant context to the System org.
         openApiClient.setTenantContextHeader(SYSTEM_ORG_ID);
 
         // Confirm the new org and user can be fetched
-        final Org foundOrg = orgsApi.getOrg(createdOrg.getId());
+        final Org foundOrg = orgsApi.getOrg(org.getId());
         System.out.println("Found org: " + foundOrg);
 
-        // final VcdUser foundLdapUser = userApi.getUser(ldapImportedUser.getId());
-        // System.out.println("Found LDAP user: " + foundLdapUser);
-        // final VcdUser foundOidcUser = userApi.getUser(oidcImportedUser.getId());
-        // System.out.println("Found OIDC user: " + foundOidcUser);
+        final VcdUser foundLdapUser = userApi.getUser(ldapImportedUser.getId());
+        System.out.println("Found LDAP user: " + foundLdapUser);
+        final VcdUser foundOidcUser = userApi.getUser(oidcImportedUser.getId());
+        System.out.println("Found OIDC user: " + foundOidcUser);
         final VcdUser foundSamlUser = userApi.getUser(samlImportedUser.getId());
         System.out.println("Found SAML user: " + foundSamlUser);
     }
@@ -291,6 +354,15 @@ public class TmImportIdpUserExample {
         return foundRoles.getValues().get(0);
     }
 
+    // IDP CERTS
+    // --------------------------------------------------
+    public static void trustIdpCirtificate(final String alias, final String cert) {
+        final TrustedCertificate trustedCertificate = new TrustedCertificate();
+        trustedCertificate.alias(alias).certificate(cert);
+        trustedCirtificateApi.trustCertificate(trustedCertificate);
+    }
+
+
     // LDAP CONFIGURATION
     // --------------------------------------------------
 
@@ -299,6 +371,10 @@ public class TmImportIdpUserExample {
      * See "LDAP Server VARS" [Line 50] for variable definitions.
      */
     public static void configureLdapInOrg(AdminOrgType adminOrg) {
+        // Trust the IDP certificate. This is only necessary if the
+        // LDAP instance does not have a well-signed cert.
+        trustIdpCirtificate(LDAP_CERT_ALIAS, LDAP_CERT_VALUE);
+
         // Set connection variables for LDAP server
         CustomOrgLdapSettingsType customOrgLdapSettings = vcdClient.getVCloudObjectFactory().createCustomOrgLdapSettingsType();
         customOrgLdapSettings.setHostName(LDAP_SERVER_HOST);
@@ -365,14 +441,15 @@ public class TmImportIdpUserExample {
     // OIDC CONFIGURATION
     // --------------------------------------------------
     public static void configureOidcInOrg(AdminOrgType adminOrg) {
+        // Trust the IDP certificate. This is only necessary if the
+        // OIDC instance does not have a well-signed cert.
+        trustIdpCirtificate(OIDC_CERT_ALIAS, OIDC_CERT_VALUE);
+
         // Retrieve org OAuth settings.
         final OrgSettingsType orgSettings = adminOrg.getSettings();
         final OrgOAuthSettingsType oAuthSettingsType = orgSettings.getOrgOAuthSettings();
         final LinkType providerConfigLink =
                 VcdUtils.findLink(oAuthSettingsType.getLink(), RestAdminConstants.MediaType.OPENID_PROVIDER_CONFIG);
-
-        // Trust the IDP certificate.
-        trustOidcCirtificate();
 
         // Configure OpenID Provider configuration using a well-known configuration endpoint.
         final OpenIdProviderInfoType providerInfo = new OpenIdProviderInfoType();
@@ -420,20 +497,16 @@ public class TmImportIdpUserExample {
 
     // SAML CONFIGURATION
     // --------------------------------------------------
-    public static void configureSamlInOrg(final AdminOrgType adminOrg) {
-        try {
-            // Download SAML IDP metadata to configure within VCFA.
-            // ### SHOULD WE BE DOWNLOADING THE METADATA OR ASSUME THE USER HAS IT LOCALLY? THIS ADDS MORE COMPLEXITY TO THE EXAMPLE ###
-            final URL samlMetadataUri = new URL(SAML_METADATA_URL_STRING);
-            final String ipSamlMetadata =
-                    downloadMetadata(samlMetadataUri);
+    public static void configureSamlInOrg(final AdminOrgType adminOrg) throws IOException {
+        // Trust the IDP certificate. This is only necessary if the
+        // SAML instance does not have a well-signed cert.
+        trustIdpCirtificate(SAML_CERT_ALIAS, SAML_CERT_VALUE);
 
-            // Update SAML settings with downloaded metadata.
-            updateOrgFederationSettings(ipSamlMetadata, true, adminOrg);
+        // Retrieve SAML metadata XML from local file.
+        final String ipSamlMetadata = Files.readString(Paths.get(SAML_METADATA_XML_PATH));
 
-        } catch (Exception e) {
-            throw new Error(e);
-        }
+        // Update SAML settings with downloaded metadata.
+        updateOrgFederationSettings(ipSamlMetadata, true, adminOrg);
     }
 
     private static void updateOrgFederationSettings(final String ipSamlMetadata,
@@ -457,6 +530,9 @@ public class TmImportIdpUserExample {
 
         final JAXBElement<OrgFederationSettingsType> federationSettings =
                 objectFactory.createOrgFederationSettings(federationSettingsType);
+        final OrgFederationSettingsType federationSettingsValue = federationSettings.getValue();
+        federationSettingsValue.setSamlSPEntityId(SAML_CONFIG_ENTITY_ID);
+        federationSettings.getValue().setEnabled(true);
 
         // Update the SAML settings.
         final OrgFederationSettingsType updatedFederationSettings =
@@ -465,93 +541,4 @@ public class TmImportIdpUserExample {
                         federationSettings, OrgFederationSettingsType.class);
         System.out.printf("Configured SAML for org %s: %s", adminOrg.getName(), updatedFederationSettings);
     }
-
-    /**
-     * UNSURE IF DOWNLOADING THE METADATA IS STRICTLY NECESSARY FOR THE BASE EXAMPLE.
-     * PERHAPS THE EXAMPLE SHOULD ASSUME THE USER HAS THEIR SAML METADATA XML LOCALLY DOWNLOADED.
-     * --------------------------------------------------------------------------------------------------------
-     */
-    private static String downloadMetadata(final URL samlMetadataUri) throws Exception {
-        final HttpsURLConnection connection = (HttpsURLConnection) samlMetadataUri.openConnection();
-        connection.setHostnameVerifier((arg0, arg1) -> true);
-        connection.setSSLSocketFactory(getPermissiveSSLSocketFactory());
-        connection.connect();
-        final BufferedReader reader = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-        final StringWriter sw = new StringWriter();
-        for (; ; ) {
-            final int character = reader.read();
-            if (character == -1) {
-                break;
-            }
-            sw.write(character);
-        }
-
-        sw.close();
-        reader.close();
-        connection.disconnect();
-
-        return sw.toString();
-    }
-
-    private static SSLSocketFactory getPermissiveSSLSocketFactory() throws Exception {
-        final SSLContext permissiveContext = SSLContext.getInstance("TLS");
-        permissiveContext.init(null,
-                new TrustManager[]{new X509TrustManager() {
-                    @Override
-                    public void checkClientTrusted(X509Certificate[] arg0, String arg1) {
-                        // Do nothing
-                    }
-
-                    @Override
-                    public void checkServerTrusted(X509Certificate[] arg0, String arg1) {
-                        // Do nothing
-                    }
-
-                    @Override
-                    public X509Certificate[] getAcceptedIssuers() {
-                        return null;
-                    }
-                }},
-                new SecureRandom());
-
-        return permissiveContext.getSocketFactory();
-    }
-    /**
-     * --------------------------------------------------------------------------------------------------------
-     * UNSURE IF DOWNLOADING THE METADATA IS STRICTLY NECESSARY FOR THE BASE EXAMPLE.
-     * PERHAPS THE EXAMPLE SHOULD ASSUME THE USER HAS THEIR SAML METADATA XML LOCALLY DOWNLOADED.
-     */
-
-    private static void trustOidcCirtificate() {
-        final TrustedCertificate trustedCertificate = new TrustedCertificate();
-        trustedCertificate.alias("ip-205.net-101.vm.sof-mbu.broadcom.net_2025-06-04t01:00:18.777z");
-        trustedCertificate.id("urn:vcloud:trustedCertificate:874ff7bd-882e-4528-b910-573e82271dea");
-        trustedCertificate.certificate("-----BEGIN CERTIFICATE-----\n" +
-                "MIIEMzCCAxugAwIBAgIFFyZIlpcwDQYJKoZIhvcNAQELBQAwgawxCzAJBgNVBAYT\n" +
-                "AlVTMRMwEQYDVQQIDApjYWxpZm9ybmlhMRIwEAYDVQQHDAlQYWxvIEFsdG8xDzAN\n" +
-                "BgNVBAoMBlZNd2FyZTEaMBgGA1UECwwRSG9yaXpvbi1Xb3Jrc3BhY2UxJDAiBgNV\n" +
-                "BAMMG0ludGVybmFsIFJvb3QgQ0EgMTcyNjQ4OTY5NjEhMB8GCSqGSIb3DQEJARYS\n" +
-                "dW5rbm93bkB2bXdhcmUuY29tMCAXDTIzMDkxNzEyMjgxN1oYDzIwNTIwMjAxMTIy\n" +
-                "ODE3WjCBtzELMAkGA1UEBhMCVVMxEzARBgNVBAgMCmNhbGlmb3JuaWExEjAQBgNV\n" +
-                "BAcMCVBhbG8gQWx0bzEPMA0GA1UECgwGVk13YXJlMRowGAYDVQQLDBFIb3Jpem9u\n" +
-                "LVdvcmtzcGFjZTEvMC0GA1UEAwwmaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
-                "cm9hZGNvbS5uZXQxITAfBgkqhkiG9w0BCQEWEnVua25vd25Adm13YXJlLmNvbTCC\n" +
-                "ASIwDQYJKoZIhvcNAQEBBQADggEPADCCAQoCggEBAO570V0+vpQ7996MzerBa3Nm\n" +
-                "EvpEbAFPd+t8jRXMPxqEzfi7I7FMGt68TXoG6wR6Z+cn5dmYWcoXxUAESOmQuBbT\n" +
-                "XtYHZ1rMbeN2M1OGtgyC4AhadA+14vJ6vIEF+0oZQOoztxo/qMuhaI1m65nIHGrx\n" +
-                "M9DnEYQCJTq8cMD/6/cI7H6BLEjmyxhh/4Gln6JAbn5kMC+hO/qquwzONMtSn3FR\n" +
-                "GAeIO68WXjeJQJSiFaBsOmBNgZAEgqCUg5J3CHlgFNGRTgoPGbyokHE3r5mZHCWs\n" +
-                "BsTehwPGdimcKUvhbWI2XLl77IDRN6fGrmgvxKpTEQv/L0pjATF+xl8QkSStF7cC\n" +
-                "AwEAAaNNMEswMQYDVR0RBCowKIImaXAtMjA1Lm5ldC0xMDEudm0uc29mLW1idS5i\n" +
-                "cm9hZGNvbS5uZXQwCQYDVR0TBAIwADALBgNVHQ8EBAMCBeAwDQYJKoZIhvcNAQEL\n" +
-                "BQADggEBANS05JiP7Gi/ZQb5r4gk3CX11l/BdrWuNqSO9x34GFxvnh+aWsvySFJI\n" +
-                "RkxSfZEzVStRkqDmtt7xZpB+ihX6cGWqAs38Rd9nHDOVfY1ZKuvN+shBTzoroX4h\n" +
-                "DrcD9rA08A4s7zjfnMQBK7lGbYkWP35/3eU7mGR7au4c/2PfZpE/3dVZB5DQDJud\n" +
-                "nybNNoRVj7MTEGWG043QmeYoa5X7+YdlbIsxFQKQZesY01gXyTeS72UAa1lat8ME\n" +
-                "xM+u879t1vTKcKxpFdi4TLeedV7G8le3ceHQMCO2StpsBQ81v4xqf522iMNSKpID\n" +
-                "WOC6YIvbIU77b7/wyLk0cAbA5Ikxhn4=\n" +
-                "-----END CERTIFICATE-----");
-        trustedCirtificateApi.trustCertificate(trustedCertificate);
-    }
-
 }
