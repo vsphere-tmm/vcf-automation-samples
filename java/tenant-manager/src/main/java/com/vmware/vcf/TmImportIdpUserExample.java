@@ -82,23 +82,23 @@ public class TmImportIdpUserExample {
     private static final String LDAP_IMPORT_USERNAME = "exampleLdapUser";
 
     // Use the below two vars if the IDP cert is not well-signed or already trusted in VCFA.
-    private static final String LDAP_CERT_ALIAS = "ip-205.net-101.vm.sof-mbu.broadcom.net_2025-06-04t01:00:18.777z";
+    private static final String LDAP_CERT_ALIAS = "ldapExampleAlias";
     private static final String LDAP_CERT_VALUE =
             "-----BEGIN CERTIFICATE-----\n" +
-                    "examplecertexamplecertexamplecertexamplecertexamplecertexamplecert\n" +
+                    "...\n" +
                     "-----END CERTIFICATE-----";
 
     // OIDC CONFIG VARS
     private static final String OIDC_IMPORT_USERNAME = "exampleOidcUser";
-    private static final String OIDC_PROVIDER_CONFIG_ENDPOINT = "https://ip-205.net-101.vm.sof-mbu.broadcom.net/SAAS/auth/.well-known/openid-configuration";
+    private static final String OIDC_PROVIDER_CONFIG_ENDPOINT = "https://example-url/provider-config/openid-configuration";
     private static final String OIDC_CLIENT_ID = "exampleOidcClient";
     private static final String OIDC_CLIENT_SECRET = "abcdefghijklmnopqrstuvwxyz1234567890";
 
     // Use the below two vars if the IDP cert is not well-signed or already trusted in VCFA.
-    private static final String OIDC_CERT_ALIAS = "oidcexamplealias";
+    private static final String OIDC_CERT_ALIAS = "oidcExampleAlias";
     private static final String OIDC_CERT_VALUE =
             "-----BEGIN CERTIFICATE-----\n" +
-                    "examplecertexamplecertexamplecertexamplecertexamplecertexamplecert\n" +
+                    "...\n" +
                     "-----END CERTIFICATE-----";
 
     // SAML CONFIG VARS
@@ -106,14 +106,14 @@ public class TmImportIdpUserExample {
     private static final String SAML_CONFIG_ENTITY_ID = "exampleEntityId";
     private static final String SAML_METADATA_XML_PATH = "/path/to/saml_metadata.xml";
     // Use the below two vars if the IDP cert is not well-signed or already trusted in VCFA.
-    private static final String SAML_CERT_ALIAS = "samlexamplealias";
+    private static final String SAML_CERT_ALIAS = "samlExampleAlias";
     private static final String SAML_CERT_VALUE =
             "-----BEGIN CERTIFICATE-----\n" +
-                    "examplecertexamplecertexamplecertexamplecertexamplecertexamplecert\n" +
+                    "...\n" +
                     "-----END CERTIFICATE-----";
 
     // ORG + ROLE VARS
-    private static final String SYSTEM_ORG_ID = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9"; // Do not change
+    private static final String SYSTEM_ORG_ID = "urn:vcloud:org:a93c9db9-7471-3192-8d09-a8f7eeda85f9";
     private static final String EXAMPLE_ORG_URN = "urn:vcloud:org:ba12d5cb-07ae-4050-b462-6fb3e38c8861";
     private static final String ORG_ADMIN_ROLE_NAME = "Organization Administrator";
 
@@ -124,7 +124,7 @@ public class TmImportIdpUserExample {
     private static OrgApi orgsApi = null;
     private static RolesApi rolesApi = null;
     private static UserApi userApi = null;
-    private static TrustedCertificatesApi trustedCirtificateApi = null;
+    private static TrustedCertificatesApi trustedCertificateApi = null;
     private static CxfClientSecurityContext securityContext;
 
     public static void main(String[] args) throws Exception {
@@ -188,11 +188,11 @@ public class TmImportIdpUserExample {
         orgsApi = openApiClient.createProxy(OrgApi.class);
         rolesApi = openApiClient.createProxy(RolesApi.class);
         userApi = openApiClient.createProxy(UserApi.class);
-        trustedCirtificateApi = openApiClient.createProxy(TrustedCertificatesApi.class);
+        trustedCertificateApi = openApiClient.createProxy(TrustedCertificatesApi.class);
     }
 
     /*
-     * Only needed if your VCD instance is not using a well-signed certificate.
+     * Only needed if your TM instance is not using a well-signed certificate.
      */
     private static KeyStore getKeyStore() throws Exception {
         final String alias = SettingsLoader.getProviderConfig().get(Constants.TRUSTSTORE_ALIAS);
@@ -282,7 +282,7 @@ public class TmImportIdpUserExample {
     public static void trustIdpCertificate(final String alias, final String cert) {
         final TrustedCertificate trustedCertificate = new TrustedCertificate();
         trustedCertificate.alias(alias).certificate(cert);
-        trustedCirtificateApi.trustCertificate(trustedCertificate);
+        trustedCertificateApi.trustCertificate(trustedCertificate);
     }
 
     // LDAP CONFIGURATION
