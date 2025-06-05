@@ -10,12 +10,16 @@ git clone https://github-vcf.devops.broadcom.net/vcf/vcf-automation-samples
 
 #### 2. Prerequisites
 
-- Copy or install "rest-api-client" jar in your local maven repo.
-- Point your local maven home repo in `build/maven-settings.xml`
-- Java 11 or older
-- maven v3.8.4 or older
-- Build the project at the tenant-manager root directory `mvn -s build/maven-settings.xml clean install -DskipTests=true`
-- Run the "TmClientExample"
+- Use the following Java and Maven versions:
+  - Java 17 or older
+  - Maven v3.8.4 or older
+- The following libraries and their dependencies should be present in your local maven repo:
+  - vcf-automation-samples-parent
+  - vcfa-samples-commons
+  - automation-services
+- Build the project at the tenant-manager root directory `mvn clean install` 
+- Run the desired example(s); e.g. "TmClientExample", "TmImportIdpUserExample"
+  - Note: Some examples, like "TmImportIdpUserExample", will require global variables to be updated to point to user-specific data in order to successfully run.
 
 ### 3. Prerequisites for running Region create/update examples
 
