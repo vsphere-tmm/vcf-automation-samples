@@ -65,6 +65,12 @@ import com.vmware.vcloud.rest.openapi.model.VcdUser;
  */
 public class TmImportIdpUserExample {
 
+    /*
+     * Many of these variables, especially relating to specific IDP config values and
+     * certs will need to be filled in with relevant data. This example will not function
+     * properly without relevant configuration information.
+     */
+
     // LDAP CONFIG VARS
     public static final String LDAP_SERVER_BASE_DN = "dc=vsphere,dc=local";
     private static final String LDAP_SERVER_HOST = "examplLdapServer.ldap.com";
@@ -273,12 +279,11 @@ public class TmImportIdpUserExample {
 
     // IDP CERTS
     // --------------------------------------------------
-    public static void trustIdpCirtificate(final String alias, final String cert) {
+    public static void trustIdpCertificate(final String alias, final String cert) {
         final TrustedCertificate trustedCertificate = new TrustedCertificate();
         trustedCertificate.alias(alias).certificate(cert);
         trustedCirtificateApi.trustCertificate(trustedCertificate);
     }
-
 
     // LDAP CONFIGURATION
     // --------------------------------------------------
@@ -290,7 +295,7 @@ public class TmImportIdpUserExample {
     public static void configureLdapInOrg(AdminOrgType adminOrg) {
         // Trust the IDP certificate. This is only necessary if the
         // LDAP instance does not have a well-signed cert.
-        trustIdpCirtificate(LDAP_CERT_ALIAS, LDAP_CERT_VALUE);
+        trustIdpCertificate(LDAP_CERT_ALIAS, LDAP_CERT_VALUE);
 
         // Set connection variables for LDAP server
         CustomOrgLdapSettingsType customOrgLdapSettings = vcdClient.getVCloudObjectFactory().createCustomOrgLdapSettingsType();
@@ -364,7 +369,7 @@ public class TmImportIdpUserExample {
     public static void configureOidcInOrg(AdminOrgType adminOrg) {
         // Trust the IDP certificate. This is only necessary if the
         // OIDC instance does not have a well-signed cert.
-        trustIdpCirtificate(OIDC_CERT_ALIAS, OIDC_CERT_VALUE);
+        trustIdpCertificate(OIDC_CERT_ALIAS, OIDC_CERT_VALUE);
 
         // Retrieve org OAuth settings.
         final OrgSettingsType orgSettings = adminOrg.getSettings();
@@ -432,7 +437,7 @@ public class TmImportIdpUserExample {
     public static void configureSamlInOrg(final AdminOrgType adminOrg) throws IOException {
         // Trust the IDP certificate. This is only necessary if the
         // SAML instance does not have a well-signed cert.
-        trustIdpCirtificate(SAML_CERT_ALIAS, SAML_CERT_VALUE);
+        trustIdpCertificate(SAML_CERT_ALIAS, SAML_CERT_VALUE);
 
         // Retrieve SAML metadata XML from local file.
         final String ipSamlMetadata = Files.readString(Paths.get(SAML_METADATA_XML_PATH));
