@@ -5,7 +5,7 @@ This repo is for internally tracking the samples work to be published at https:/
 
 #### 1. Clone this git repository.
 ```
-git clone https://github-vcf.devops.broadcom.net/vcf/vcf-automation-samples
+git clone https://github.com/vsphere-tmm/vcf-automation-samples 
 ```
 
 #### 2. Prerequisites
